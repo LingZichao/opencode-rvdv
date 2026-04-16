@@ -1,0 +1,6 @@
+[install]
+peer = false
+
+[run]
+# Allow TypeScript files to be run directly
+preload = ["./src/config/env.ts"]

@@ -1,0 +1,114 @@
+# crate workspace
+# make -f makefileFRV setup 
+
+# generate Randonaized instructions
+# make -f makefileFRV force_rv 
+
+# compile verilog design : openC910
+# make -f makefileFRV compile
+
+# simulate 
+# make -f makefileFRV run
+
+# view coverage result
+# make -f makefileFRV view_cov
+
+# make -f makefileFRV clean
+
+FORCE_RV_BIN = /home/c910/force-riscv/bin/friscv
+RISCV_OBJCOPY = $(RISCV_TOOL)/bin/riscv64-unknown-elf-objcopy
+SREC2VMEM = /home/c910/openc910/smart_run/tests/bin/Srec2vmem
+
+# TEST = aiq0_branch_coverage_test
+# TEST = my_forcerv_test
+TEST = AgenticTargetTest
+TEST_PY = $(TEST).py
+CONFIG_FILE = /home/c910/force-riscv/config/riscv_rv64_c910.config
+
+ELF_FILE = ${TEST}.Default.ELF
+HEX_FILE = inst.hex
+PAT_FILE = inst.pat
+
+WORK_DIR = work_force
+COV_DIR = ${TEST}.vdb
+
+# FORCE_RV_CONSTRAINPY_REPO = /home/c910/wangyahao/openc910/smart_run
+# FORCE_RV_CONSTRAINPY_REPO = /home/c910/lingzichao/openc910/smart_run/ForceRvConstrainPyRepo
+COV_RESULT_REPO = /home/c910/openc910/smart_run/CovResultRepo
+
+# for AgenticISG
+AGENTIC_ISG = /home/c910/wangyahao/AgenticISG
+TASK_NAME = task_default
+COVDB_NAME = $(TASK_NAME).vdb
+ITER_NUM = 0
+TEST_NAME = $(TASK_NAME)_iter_$(ITER_NUM)
+COVTEST = $(TEST_NAME)
+# AGENTICISG_WORK_SPACE = $(AGENTIC_ISG)/target
+# AGENTICISG_WORK_SPACE = ../..
+
+.PHONY: all clean compile run force_rv setup view_cov html_cov text_cov view_text_cov merge_cov
+
+all: setup force_rv compile run
+
+setup:
+	mkdir -p $(WORK_DIR)
+	
+
+force_rv:
+	cp ./$(TEST_PY) $(WORK_DIR)/
+	cd $(WORK_DIR) && \
+	$(FORCE_RV_BIN) -t $(TEST_PY) --cfg $(CONFIG_FILE) > frv.log && \
+	$(RISCV_OBJCOPY) -O srec $(ELF_FILE) $(HEX_FILE) && \
+	$(SREC2VMEM) $(HEX_FILE) $(PAT_FILE)
+
+compile:
+	cd $(WORK_DIR) && \
+	vcs -sverilog -top tb -full64 -kdb -lca -debug_access +nospecify +notimingchecks +lint=TFIPC-L \
+	    -debug_acc+all -debug_region+cell+encrypt -timescale=1ns/100fs \
+	    +define+no_warning +define+TSMC_NO_WARNING +define+COVER_ON \
+	    -cm line+cond+fsm+branch+tgl -cm_dir \
+	    -f ../logical/filelists/sim.fl -l comp.vcs.log
+
+# 如果轮次为0，删除已有的测试数据
+run:
+	cd $(WORK_DIR) && \
+	if [ "$(ITER_NUM)" = "1" ]; then \
+		rm -rf ./simv.vdb/snps/coverage/db/testdata/*; \
+	fi \
+	&& ./simv -cm line+cond+fsm+branch+tgl -cm_name $(COVTEST) -cm_dir simv.vdb -l simv.log \
+ 	&& cp -r ./simv.vdb ../../
+# 	&& cp -r ./simv.vdb $(AGENTICISG_WORK_SPACE)/
+view_cov:
+	cd $(WORK_DIR) && \
+	dve -cov -dir ./$(COV_DIR) &
+
+html_cov:
+# 	-rm -r $(WORK_DIR)/cov_report_cycle
+	cd $(WORK_DIR) && \
+	urg -full64 -dir *.vdb -report cov_report
+
+text_cov:
+	cd $(WORK_DIR) && \
+	urg -dir ./$(COV_DIR) -report cov_report -format text
+
+view_text_cov:
+	cd $(WORK_DIR)/cov_report && \
+	cat summary.txt
+
+merge_cov:
+	@echo "Merging coverage databases..."
+	@cd $(COV_RESULT_REPO) && \
+	VDB_FILES=$$(find . -maxdepth 1 -name "*.vdb" -type d | sed 's|^./|-dir |' | tr '\n' ' ') && \
+	if [ -n "$$VDB_FILES" ]; then \
+		echo "Found VDB files: $$VDB_FILES"; \
+		urg $$VDB_FILES -dbname merged_cov.vdb; \
+		echo "Coverage merge completed. Result saved to merged_cov.vdb"; \
+	else \
+		echo "No .vdb directories found in $(COV_RESULT_REPO)"; \
+	fi
+
+verdi:
+	@cd $(WORK_DIR) && verdi -sv -f ../logical/filelists/sim.fl -ssy -ssv -top tb -ssf novas.fsdb &
+
+clean:
+	rm -rf $(WORK_DIR)

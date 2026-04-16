@@ -1,0 +1,136 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  
+  "model": "qwen/glm-5",
+  
+  "server": {
+    "port": {{OPENCODE_PORT}},
+    "hostname": "{{OPENCODE_HOSTNAME}}",
+    "mdns": true,
+    "mdnsDomain": "rvdv.local"
+  },
+  
+  "provider": {
+    "qwen": {
+      "options": {
+        "baseURL": "https://coding.dashscope.aliyuncs.com/v1",
+        "apiKey": "{env:QWEN_API_KEY}",
+        "timeout": 300000
+      }
+    },
+    "ark": {
+      "options": {
+        "baseURL": "https://ark.cn-beijing.volces.com/api/v3",
+        "apiKey": "{env:ARK_API_KEY}",
+        "timeout": 300000
+      }
+    }
+  },
+  
+  "agent": {
+    "coordinator": {
+      "description": "主协调Agent - 规划RISC-V验证迭代流程",
+      "mode": "primary",
+      "model": "qwen/glm-5",
+      "prompt": "{file:.opencode/prompts/coordinator.md}",
+      "color": "primary",
+      "permission": {
+        "task": {
+          "analyzer": "allow",
+          "generator": "allow",
+          "recognizer": "allow"
+        }
+      }
+    },
+    
+    "analyzer": {
+      "description": "覆盖率分析子代理 - 分析覆盖率报告和版本管理",
+      "mode": "subagent",
+      "model": "qwen/glm-5",
+      "prompt": "{file:.opencode/prompts/analyzer.md}",
+      "tools": {
+        "coverage_query": true,
+        "coverage_fetch": true,
+        "coverage_list": true,
+        "read": true,
+        "grep": true,
+        "glob": true
+      }
+    },
+    
+    "generator": {
+      "description": "ISG脚本生成子代理 - 生成FORCE-RISCV测试脚本",
+      "mode": "subagent",
+      "model": "qwen/glm-5",
+      "prompt": "{file:.opencode/prompts/generator.md}",
+      "tools": {
+        "write": true,
+        "edit": true,
+        "isg_compile": true,
+        "isg_run": true,
+        "knowledge-base": true,
+        "read": true
+      }
+    },
+    
+    "recognizer": {
+      "description": "微架构场景识别子代理 - 识别RTL模块行为",
+      "mode": "subagent",
+      "model": "qwen/glm-5",
+      "prompt": "{file:.opencode/prompts/recognizer.md}",
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "browse": true,
+        "knowledge-base": true
+      }
+    }
+  },
+  
+  "command": {
+    "verify": {
+      "description": "启动RTL覆盖率验证任务",
+      "template": "分析RTL文件 $1 行号范围 $2 的覆盖率不足问题并制定ISG脚本方案",
+      "agent": "coordinator"
+    },
+    "analyze": {
+      "description": "仅分析覆盖率（不生成脚本）",
+      "template": "分析RTL文件 $1 行号范围 $2 的覆盖率情况",
+      "agent": "analyzer",
+      "subtask": true
+    },
+    "generate": {
+      "description": "仅生成ISG脚本（不执行仿真）",
+      "template": "根据以下测试计划生成ISG脚本: $ARGUMENTS",
+      "agent": "generator",
+      "subtask": true
+    },
+    "status": {
+      "description": "查看任务状态和覆盖率进度",
+      "template": "查看当前任务的进度和覆盖率状态",
+      "agent": "coordinator"
+    }
+  },
+  
+  "instructions": [
+    "AGENTS.md",
+    "workspace/agentDoc/C910ISA_Agent_Friendly.md",
+    "workspace/agentDoc/condition_coverage.md"
+  ],
+  
+  "permission": {
+    "edit": "allow",
+    "bash": "allow"
+  },
+  
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
+  },
+  
+  "experimental": {
+    "lsp": true
+  }
+}

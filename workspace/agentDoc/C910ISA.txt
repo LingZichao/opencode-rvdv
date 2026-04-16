@@ -1,0 +1,253 @@
+# C910 指令集文档整理 (Agent 可读版本)
+
+## 文档概览
+
+C910 实现的指令集分为两大部分：
+1. **RV 基础指令集** - RISC-V 标准指令
+2. **玄铁扩展指令集** - C910 特有扩展
+
+---
+
+## 1. RV64I - 整型基础指令集
+
+### 1.1 指令分类总览
+
+| 类别 | 指令数量 | 典型延时 |
+|------|----------|----------|
+| 加减法指令 | 7 | 1 周期 |
+| 逻辑操作指令 | 6 | 1 周期 |
+| 移位指令 | 12 | 1 周期 |
+| 比较指令 | 4 | 1 周期 |
+| 数据传输指令 | 2 | 1 周期 |
+| 分支跳转指令 | 8 | 1 周期 |
+| 内存存取指令 | 12 | ≥3 周期 (LOAD) / 1 周期 (STORE) |
+| 控制寄存器操作指令 | 6 | 阻塞执行/不定周期 |
+| 低功耗指令 | 1 | 不定周期 |
+| 异常返回指令 | 2 | 阻塞执行/不定周期 |
+| 特殊功能指令 | 5 | 不定周期 |
+
+### 1.2 指令详情
+
+#### 加减法指令 (ALU: 1 周期)
+```
+ADD, ADDW, ADDI, ADDIW, SUB, SUBW
+```
+
+#### 逻辑操作指令 (ALU: 1 周期)
+```
+AND, ANDI, OR, ORI, XOR, XORI
+```
+
+#### 移位指令 (ALU: 1 周期)
+```
+SLL, SLLW, SLLI, SLLIW
+SRL, SRLW, SRLI, SRLIW
+SRA, SRAW, SRAI, SRAIW
+```
+
+#### 比较指令 (ALU: 1 周期)
+```
+SLT, SLTU, SLTI, SLTIU
+```
+
+#### 分支跳转指令 (ALU: 1 周期)
+```
+BEQ, BNE, BLT, BGE, BLTU, BGEU
+JAL, JALR
+```
+
+#### 内存存取指令 (关键性能特征)
+| 指令 | 类型 | 延时特征 |
+|------|------|----------|
+| LB/LBU | 字节加载 | WEAK ORDER: ≥3 周期 |
+| LH/LHU | 半字加载 | STRONG ORDER: 不定周期 |
+| LW/LWU | 字加载 | 取决于内存层次 |
+| LD | 双字加载 | 取决于内存层次 |
+| SB/SH/SW/SD | 存储指令 | 1 周期 |
+
+#### 控制寄存器指令 (CSR)
+```
+CSRRW, CSRRS, CSRRC      # 寄存器操作
+CSRRWI, CSRRSI, CSRRCI   # 立即数操作
+# 特征：阻塞执行，不定周期
+```
+
+#### 特殊功能指令
+```
+WFI      # 低功耗等待 - 不定周期
+MRET     # 机器模式异常返回 - 阻塞执行
+SRET     # 超级用户模式异常返回 - 阻塞执行
+FENCE    # 存储同步 - 不定周期
+FENCE.I  # 指令流同步 - 阻塞执行
+SFENCE.VMA # 虚拟内存同步 - 阻塞执行
+ECALL    # 环境异常 - 1 周期
+EBREAK   # 断点 - 1 周期
+```
+
+---
+
+## 2. RV64M - 乘除法指令集
+
+### 2.1 乘法指令 (4 周期)
+```
+MUL, MULW      # 有符号乘法
+MULH, MULHSU, MULHU  # 高位结果乘法
+```
+
+### 2.2 除法/取余指令 (可变延时)
+| 指令 | 延时范围 | 说明 |
+|------|----------|------|
+| DIV/DIVU | 3-20 周期 | 有符号/无符号除法 |
+| DIVW/DIVUW | 3-12 周期 | 32 位除法 |
+| REM/REMU | 3-20 周期 | 有符号/无符号取余 |
+| REMW/REMUW | 3-12 周期 | 32 位取余 |
+
+> **Agent 提示**: 除法指令延时取决于操作数值，测试时需考虑最坏情况
+
+---
+
+## 3. RV64A - 原子指令集
+
+### 3.1 加载保留/条件存储
+```
+LR.W, LR.D    # 加载保留
+SC.W, SC.D    # 条件存储
+```
+
+### 3.2 原子操作指令
+```
+AMOSWAP.W/D   # 原子交换
+AMOADD.W/D    # 原子加法
+AMOXOR.W/D    # 原子异或
+AMOAND.W/D    # 原子与
+AMOOR.W/D     # 原子或
+AMOMIN.W/D    # 原子最小值
+AMOMAX.W/D    # 原子最大值
+AMOMINU.W/D   # 原子无符号最小值
+AMOMAXU.W/D   # 原子无符号最大值
+```
+
+> **Agent 提示**: 原子指令可能拆分为多条指令执行，延时不可预期
+
+---
+
+## 4. RV64F - 单精度浮点指令集
+
+### 4.1 运算指令
+| 指令 | 延时 | 指令 | 延时 |
+|------|------|------|------|
+| FADD.S | 3 | FMADD.S | 5 |
+| FSUB.S | 3 | FMSUB.S | 5 |
+| FMUL.S | 4 | FNMADD.S | 5 |
+| FDIV.S | 4-10 | FNMSUB.S | 5 |
+| FSQRT.S | 4-10 | | |
+
+### 4.2 其他浮点操作
+- **符号注入**: FSGNJ.S, FSGNJN.S, FSGNJX.S (3 周期)
+- **比较**: FMIN.S, FMAX.S, FEQ.S, FLT.S, FLE.S
+- **转换**: FCVT.* 系列 (拆分执行 3+1 或 1+3 周期)
+- **内存**: FLW, FSW (WEAK ORDER: ≥3 周期)
+
+---
+
+## 5. RV64D - 双精度浮点指令集
+
+### 5.1 与单精度的主要差异
+| 特性 | 单精度 (F) | 双精度 (D) |
+|------|------------|------------|
+| 除法延时 | 4-10 周期 | 4-17 周期 |
+| 开方延时 | 4-10 周期 | 4-17 周期 |
+| 数据宽度 | 32 位 | 64 位 |
+
+### 5.2 精度转换指令
+```
+FCVT.S.D  # 双精度→单精度 (3 周期)
+FCVT.D.S  # 单精度→双精度 (3 周期)
+```
+
+---
+
+## 6. RV64C - 压缩指令集
+
+### 6.1 指令编码特征
+- **16 位编码** (标准指令为 32 位)
+- **常用操作压缩**，减少代码大小
+
+### 6.2 主要压缩指令
+| 类别 | 指令示例 |
+|------|----------|
+| 加减法 | C.ADD, C.SUB, C.ADDI, C.ADDIW |
+| 逻辑 | C.AND, C.ANDI, C.OR, C.XOR |
+| 移位 | C.SLLI, C.SRLI, C.SRAI |
+| 跳转 | C.BEQZ, C.BNEZ, C.J, C.JR, C.JALR |
+| 内存 | C.LW, C.SW, C.LD, C.SD, C.LWSP, C.SWSP |
+| 特殊 | C.NOP, C.EBREAK |
+
+---
+
+## 7. Agent 验证建议
+
+### 7.1 指令延时分类 (用于 ISG 脚本设计)
+
+```python
+# 快速指令 (1 周期) - 适合大量生成
+FAST_INSTRUCTIONS = [
+    "ADD", "SUB", "AND", "OR", "XOR",
+    "SLL", "SRL", "SRA",
+    "SLT", "SLTU",
+    "BEQ", "BNE", "BLT", "BGE"
+]
+
+# 中速指令 (3-5 周期) - 适量生成
+MEDIUM_INSTRUCTIONS = [
+    "MUL", "MULW",
+    "FADD.S", "FSUB.S", "FMUL.S",
+    "FADD.D", "FSUB.D", "FMUL.D"
+]
+
+# 慢速指令 (可变延时) - 少量生成触发长周期行为
+SLOW_INSTRUCTIONS = [
+    "DIV", "DIVU", "REM", "REMU",
+    "FDIV.S", "FSQRT.S",
+    "FDIV.D", "FSQRT.D"
+]
+
+# 阻塞指令 - 谨慎使用
+BLOCKING_INSTRUCTIONS = [
+    "CSRRW", "CSRRS", "CSRRC",
+    "MRET", "SRET",
+    "FENCE", "FENCE.I"
+]
+```
+
+### 7.2 覆盖率测试要点
+
+1. **分支覆盖**: 重点测试 BEQ/BNE 等条件分支的真假路径
+2. **内存序**: 区分 WEAK ORDER 和 STRONG ORDER 指令
+3. **流水线填充**: 长周期指令需重复多次才能触发目标模块
+4. **原子操作**: LR/SC 配对测试，验证互斥机制
+
+### 7.3 ISG 脚本设计参考
+
+```python
+# 测试计划应明确指定：
+# 1. Scope: 指令类型 (如 RV64I + RV64M)
+# 2. Volume: 指令数量 (100~9999 为大量)
+# 3. Data Rules: 寄存器范围、依赖密度、特殊值
+```
+
+---
+
+## 8. 相关 RTL 模块 (从覆盖率数据库提取)
+
+根据 [verilog.sourceinfo.xml](file:///home/c910/wangyahao/AgenticISG/target/task1.vdb/snps/coverage/db/auxiliary/verilog.sourceinfo.xml)，主要验证模块包括：
+
+| 模块前缀 | 功能域 | 示例文件 |
+|----------|--------|----------|
+| [ct_ifu_*](file:///home/c910/wangyahao/openc910/C910_RTL_FACTORY/gen_rtl/ifu/rtl/ct_ifu_bht.v) | 指令取指单元 | ct_ifu_top.v, ct_ifu_lbuf.v |
+| [ct_iu_*](file:///home/c910/wangyahao/openc910/C910_RTL_FACTORY/gen_rtl/iu/rtl/ct_iu_alu.v) | 整型执行单元 | ct_iu_alu.v, ct_iu_bju.v, ct_iu_div.v |
+| [ct_l2c_*](file:///home/c910/wangyahao/openc910/C910_RTL_FACTORY/gen_rtl/l2c/rtl/ct_l2c_wb.v) | 二级缓存 | ct_l2c_top.v, ct_l2c_tag.v |
+
+---
+
+此整理版本保留了原始文档的所有关键信息，同时采用结构化格式便于 Agent 解析和引用。
