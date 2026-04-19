@@ -11,6 +11,32 @@
 - `/generate <plan>` - 仅生成ISG脚本
 - `/status` - 查看任务状态
 
+## 启动流程
+
+1. 准备运行环境
+   - 安装 `bun` 与 `opencode` 命令行工具
+   - 参考 `.env.example` 配置 `.env`，至少补充 `QWEN_API_KEY`、`PROJECT_ROOT`、`C910_RTL_ROOT`
+   - 如需自定义服务地址，可额外设置 `OPENCODE_PORT`、`OPENCODE_HOSTNAME`
+
+2. 初始化项目
+   - 推荐执行：`./scripts/init-project.sh`
+   - 或直接执行：`bun run src/init/init.ts`
+   - 该步骤会生成运行时配置 `opencode.json`，并同步 `.opencode/` 下的 agents、commands、prompts、tools
+
+3. 启动依赖服务（可选但推荐）
+   - 若需要覆盖率查询能力，请先启动 UCAPI 服务，并确保 `http://localhost:5000/health` 可访问
+   - 若未启动 UCAPI，`./scripts/start-server.sh` 会给出告警，但 OpenCode server 仍可继续启动
+
+4. 启动 OpenCode server
+   - 推荐执行：`./scripts/start-server.sh`
+   - 或通过脚本入口执行：`npm start`
+   - 默认监听地址为 `0.0.0.0:4096`，可通过 `.env` 中的 `OPENCODE_PORT` / `OPENCODE_HOSTNAME` 覆盖
+
+5. 验证启动结果
+   - 启动成功后可通过浏览器访问 `http://localhost:4096`
+   - 若命令行提示 `Project not initialized`，请先重新执行初始化步骤
+   - 若模型调用失败，优先检查 `.env` 中的 `QWEN_API_KEY` 是否已正确配置
+
 ## 工作流程
 
 1. Coordinator接收任务
