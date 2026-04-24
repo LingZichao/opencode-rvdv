@@ -7,7 +7,7 @@
 ## 核心命令
 
 - `/verify <file> <lines>` - 启动完整验证流程
-- `/analyze <file> <lines>` - 仅分析覆盖率
+- `/collect <file> <lines>` - 仅收集/查询覆盖率
 - `/generate <plan>` - 仅生成ISG脚本
 - `/status` - 查看任务状态
 
@@ -21,7 +21,7 @@
 2. 初始化项目
    - 推荐执行：`./scripts/init-project.sh`
    - 或直接执行：`bun run src/init/init.ts`
-   - 该步骤会生成运行时配置 `opencode.json`，并同步 `.opencode/` 下的 agents、commands、prompts、tools
+   - 该步骤会生成运行时配置 `opencode.json`，并同步 `.opencode/` 下的 commands、prompts、tools
 
 3. 启动依赖服务（可选但推荐）
    - 若需要覆盖率查询能力，请先启动 UCAPI 服务，并确保 `http://localhost:5000/health` 可访问
@@ -35,12 +35,11 @@
 5. 验证启动结果
    - 启动成功后可通过浏览器访问 `http://localhost:4096`
    - 若命令行提示 `Project not initialized`，请先重新执行初始化步骤
-   - 若模型调用失败，优先检查 `.env` 中的 `QWEN_API_KEY` 是否已正确配置
 
 ## 工作流程
 
 1. Coordinator接收任务
-2. Analyzer分析BASELINE覆盖率
+2. Coverage Collector收集并查询BASELINE覆盖率
 3. Recognizer识别微架构场景
 4. Generator生成ISG脚本
 5. 执行仿真并获取覆盖率

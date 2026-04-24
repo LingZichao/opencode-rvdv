@@ -1,8 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   
-  "model": "qwen/glm-5",
-  
   "server": {
     "port": {{OPENCODE_PORT}},
     "hostname": "{{OPENCODE_HOSTNAME}}",
@@ -10,37 +8,25 @@
     "mdnsDomain": "rvdv.local"
   },
   
-  "provider": {
-    "qwen": {
-      "options": {
-        "baseURL": "https://coding.dashscope.aliyuncs.com/v1",
-        "apiKey": "{env:QWEN_API_KEY}",
-        "timeout": 300000
-      }
-    }
-  },
-  
   "agent": {
     "coordinator": {
       "description": "主协调Agent - 规划RISC-V验证迭代流程",
       "mode": "primary",
-      "model": "qwen/glm-5",
       "prompt": "{file:.opencode/prompts/coordinator.md}",
       "color": "primary",
       "permission": {
         "task": {
-          "analyzer": "allow",
+          "coverage_collector": "allow",
           "generator": "allow",
           "recognizer": "allow"
         }
       }
     },
     
-    "analyzer": {
-      "description": "覆盖率分析子代理 - 分析覆盖率报告和版本管理",
+    "coverage_collector": {
+      "description": "覆盖率收集子代理 - 获取、查询并整理覆盖率报告",
       "mode": "subagent",
-      "model": "qwen/glm-5",
-      "prompt": "{file:.opencode/prompts/analyzer.md}",
+      "prompt": "{file:.opencode/prompts/coverage_collector.md}",
       "tools": {
         "coverage_query": true,
         "coverage_fetch": true,
@@ -54,7 +40,6 @@
     "generator": {
       "description": "ISG脚本生成子代理 - 生成FORCE-RISCV测试脚本",
       "mode": "subagent",
-      "model": "qwen/glm-5",
       "prompt": "{file:.opencode/prompts/generator.md}",
       "tools": {
         "write": true,
@@ -69,7 +54,6 @@
     "recognizer": {
       "description": "微架构场景识别子代理 - 识别RTL模块行为",
       "mode": "subagent",
-      "model": "qwen/glm-5",
       "prompt": "{file:.opencode/prompts/recognizer.md}",
       "tools": {
         "read": true,
@@ -87,10 +71,10 @@
       "template": "分析RTL文件 $1 行号范围 $2 的覆盖率不足问题并制定ISG脚本方案",
       "agent": "coordinator"
     },
-    "analyze": {
-      "description": "仅分析覆盖率（不生成脚本）",
-      "template": "分析RTL文件 $1 行号范围 $2 的覆盖率情况",
-      "agent": "analyzer",
+    "collect": {
+      "description": "仅收集/查询覆盖率（不生成脚本）",
+      "template": "收集并查询RTL文件 $1 行号范围 $2 的覆盖率情况",
+      "agent": "coverage_collector",
       "subtask": true
     },
     "generate": {
@@ -107,7 +91,6 @@
   },
   
   "instructions": [
-    "AGENTS.md",
     "workspace/agentDoc/C910ISA_Agent_Friendly.md",
     "workspace/agentDoc/condition_coverage.md"
   ],
