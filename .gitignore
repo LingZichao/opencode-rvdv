@@ -27,7 +27,7 @@ bun.lockb
 .idea/
 
 # 测试
-/coverage/
+openc910
 .nyc_output/
 
 # 临时文件

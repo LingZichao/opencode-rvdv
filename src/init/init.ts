@@ -46,11 +46,8 @@ function generateConfig() {
 }
 
 function validateEnvironment() {
-  const required = ["QWEN_API_KEY"]
-  const missing = required.filter(k => !process.env[k])
-  if (missing.length > 0) {
-    console.warn(`Missing environment variables: ${missing.join(", ")}`)
-    console.warn("   Copy .env.example to .env and fill in values")
+  if (!process.env.PROJECT_ROOT) {
+    console.warn("PROJECT_ROOT is not set. Using the project directory detected at runtime.")
   }
 }
 

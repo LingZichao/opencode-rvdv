@@ -8,7 +8,6 @@ function deployConfig() {
   const configFiles = [
     { src: "config/opencode.json.tmpl", dest: "opencode.json", process: true },
     { src: "config/server.json.tmpl", dest: ".opencode/server.json", process: true },
-    { src: "config/providers.json.tmpl", dest: ".opencode/providers.json", process: false },
     { src: "config/permissions.json.tmpl", dest: ".opencode/permissions.json", process: false },
   ]
 
