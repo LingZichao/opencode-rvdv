@@ -52,7 +52,7 @@
   - `condition_coverage.md` - 条件覆盖率规则
   - `ISG_Script/` - ISG脚本示例
   - `forceRV/` - ForceRISCV指令定义和文档
-- `coverageDB/` - 覆盖率数据存储
+- `.opencode/skills/coverage/coverageDB/` - 覆盖率数据存储（随 coverage skill 迁移）
   - `template/BASELINE.vdb/` - 基准覆盖率数据库
   - `template/sim/` - 仿真模板（makefileFRV）
   - `tasks/<task_name>/` - 任务运行目录
@@ -61,7 +61,7 @@
 
 ## 注意事项
 
-- 每个任务独立目录: coverageDB/tasks/<task_name>/
+- 每个任务独立目录: .opencode/skills/coverage/coverageDB/tasks/<task_name>/
 - ISG脚本存放: workspace/isgScripts/<task_name>/
 - 专注BASELINE未覆盖的VP
 - C910扩展指令集不可用，仅考虑RV64GC

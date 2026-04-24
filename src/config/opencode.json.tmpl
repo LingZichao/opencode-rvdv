@@ -27,7 +27,7 @@
       "permission": {
         "skill": {
           "*": "deny",
-          "coverage-query": "allow"
+          "coverage": "allow"
         },
         "task": {
           "coverage_collector": "allow",
@@ -53,13 +53,12 @@
       "permission": {
         "skill": {
           "*": "deny",
-          "coverage-query": "allow",
-          "coverage-fetch": "allow"
+          "coverage": "allow"
         },
         "bash": {
           "*": "deny",
-          "python3 .opencode/skills/coverage-query/scripts/ucapi_client.py *": "allow",
-          "python3 .opencode/skills/coverage-fetch/scripts/simulation_runner.py *": "allow"
+          "python3 .opencode/skills/coverage/scripts/ucapi_client.py *": "allow",
+          "python3 .opencode/skills/coverage/scripts/simulation_runner.py *": "allow"
         },
         "edit": "deny"
       }

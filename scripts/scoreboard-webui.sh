@@ -2,7 +2,7 @@
 set -e
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SCOREBOARD_DIR="$PROJECT_ROOT/coverageDB/regression/long_agent_scoreboard"
+SCOREBOARD_DIR="$PROJECT_ROOT/.opencode/skills/coverage/coverageDB/regression/long_agent_scoreboard"
 
 if [ ! -d "$SCOREBOARD_DIR" ]; then
     echo "No scoreboard data found"

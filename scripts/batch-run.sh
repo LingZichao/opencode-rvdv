@@ -2,7 +2,7 @@
 set -e
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TASKS_DIR="$PROJECT_ROOT/coverageDB/tasks"
+TASKS_DIR="$PROJECT_ROOT/.opencode/skills/coverage/coverageDB/tasks"
 
 if [ ! -d "$TASKS_DIR" ]; then
     echo "No tasks directory found"

@@ -60,9 +60,8 @@ function createDirectories() {
     "workspace/ISG_Script",
     "workspace/isgScripts",
     "workspace/rtl",
-    "coverageDB/template",
-    "coverageDB/tasks",
-    "coverageDB/regression",
+    ".opencode/skills/coverage/coverageDB/tasks",
+    ".opencode/skills/coverage/coverageDB/regression",
     "logs",
   ]
 

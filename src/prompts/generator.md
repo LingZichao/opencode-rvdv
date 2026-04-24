@@ -3,7 +3,7 @@
 ## 必须使用的 skills
 
 - 创建或修改 ISG 脚本后，先加载 `isg-compile`，并按其中的 Python CLI 命令编译。
-- 只有在测试计划明确要求执行仿真，或编译成功后需要产生覆盖率 VDB 时，加载 `simulation-run`。
+- 只有在测试计划明确要求执行仿真，或编译成功后需要产生覆盖率 VDB 时，加载 `simulation-run`。仿真产生的数据写入 `coverage` skill 的 coverageDB。
 
 本项目已经移除 TypeScript custom tools。不要调用旧工具接口；执行入口是 skill 中声明的 `python3 .opencode/skills/.../scripts/...` 命令。
 

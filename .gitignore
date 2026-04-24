@@ -13,6 +13,10 @@ logs/
 # 覆盖率任务数据（可选提交）
 coverageDB/tasks/
 coverageDB/regression/
+src/skills/coverage/coverageDB/tasks/*
+!src/skills/coverage/coverageDB/tasks/.gitkeep
+src/skills/coverage/coverageDB/regression/*
+!src/skills/coverage/coverageDB/regression/.gitkeep
 
 # 依赖
 node_modules/
@@ -23,7 +27,7 @@ bun.lockb
 .idea/
 
 # 测试
-coverage/
+/coverage/
 .nyc_output/
 
 # 临时文件

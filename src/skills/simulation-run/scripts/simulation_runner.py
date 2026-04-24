@@ -28,13 +28,40 @@ def find_project_root():
 
 
 PROJECT_ROOT = find_project_root()
-COVERAGEDB_ROOT = PROJECT_ROOT / "coverageDB"
+
+
+def find_coverage_db_root():
+    candidates = [
+        PROJECT_ROOT / ".opencode" / "skills" / "coverage" / "coverageDB",
+        PROJECT_ROOT / "src" / "skills" / "coverage" / "coverageDB",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+COVERAGEDB_ROOT = find_coverage_db_root()
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
 TEMPLATE_ROOT = COVERAGEDB_ROOT / "template"
 
 
 def get_task_sim_root(task_name):
     return COVERAGEDB_ROOT / "tasks" / task_name / "sim"
+
+
+def ensure_task_sim_root(task_name):
+    sim_root = get_task_sim_root(task_name)
+    if sim_root.exists():
+        return sim_root
+
+    template_sim = TEMPLATE_ROOT / "sim"
+    if not template_sim.exists():
+        raise FileNotFoundError(f"Simulation template not found: {template_sim}")
+
+    sim_root.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(template_sim, sim_root)
+    return sim_root
 
 
 def get_isg_script_root(task_name):
@@ -73,9 +100,7 @@ def execute_simulation(script_name, iter_count, task_name):
         isg_scripts_root = get_isg_script_root(task_name)
         isg_scripts_root.mkdir(parents=True, exist_ok=True)
 
-        sim_root = get_task_sim_root(task_name)
-        if not sim_root.exists():
-            return json.dumps({"error": f"Simulation directory not found: {sim_root}"})
+        sim_root = ensure_task_sim_root(task_name)
 
         src_script = find_script(script_name, task_name)
         dest_script = sim_root / "AgenticTargetTest.py"
@@ -128,7 +153,7 @@ def execute_simulation(script_name, iter_count, task_name):
                 "cov_report_path": str(vdb_path)
                 if vdb_path
                 else str(sim_root / "work_force" / "simv.vdb"),
-                "note": "load coverage-query and query this test name to get coverage information",
+                "note": "load coverage and query this test name to get coverage information",
             }
         )
     except Exception as e:

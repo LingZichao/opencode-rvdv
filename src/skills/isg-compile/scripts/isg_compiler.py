@@ -23,7 +23,6 @@ def find_project_root():
 
 
 PROJECT_ROOT = find_project_root()
-COVERAGEDB_ROOT = PROJECT_ROOT / "coverageDB"
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
 
 

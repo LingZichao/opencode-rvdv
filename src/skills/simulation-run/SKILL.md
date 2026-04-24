@@ -19,12 +19,12 @@ python3 .opencode/skills/simulation-run/scripts/simulation_runner.py --script-na
 
 - `script_name`: script under `workspace/isgScripts/<task_name>/`.
 - `iter_count`: current iteration number; it becomes part of the coverage test name.
-- `task_name`: task directory under `coverageDB/tasks/`.
+- `task_name`: task directory under `.opencode/skills/coverage/coverageDB/tasks/`.
 
 ## Expected Output
 
 Successful output is JSON containing the generated `test_name` and `cov_report_path`.
-Use that `test_name` with the `coverage-query` skill to inspect coverage for the RTL range.
+Use that `test_name` with the `coverage` skill to inspect coverage for the RTL range.
 
 ## Workflow
 
