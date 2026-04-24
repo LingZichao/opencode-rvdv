@@ -21,7 +21,7 @@
 2. 初始化项目
    - 推荐执行：`./scripts/init-project.sh`
    - 或直接执行：`bun run src/init/init.ts`
-   - 该步骤会生成运行时配置 `opencode.json`，并同步 `.opencode/` 下的 commands、prompts、tools
+   - 该步骤会生成运行时配置 `opencode.json`，并同步 `.opencode/` 下的 commands、prompts、skills
 
 3. 启动依赖服务（可选但推荐）
    - 若需要覆盖率查询能力，请先启动 UCAPI 服务，并确保 `http://localhost:5000/health` 可访问
@@ -56,8 +56,7 @@
   - `template/BASELINE.vdb/` - 基准覆盖率数据库
   - `template/sim/` - 仿真模板（makefileFRV）
   - `tasks/<task_name>/` - 任务运行目录
-- `src/scripts/` - Python工具实现
-- `src/tools/` - TypeScript工具包装
+- `src/skills/` - OpenCode技能包（按工具族组织，包含SKILL.md与Python CLI脚本）
 - `src/prompts/` - Agent系统提示词
 
 ## 注意事项
@@ -67,3 +66,4 @@
 - 专注BASELINE未覆盖的VP
 - C910扩展指令集不可用，仅考虑RV64GC
 - ISG方法论：间接驱动与概率碰撞，用数量弥补精度
+- 本项目不再注入 TypeScript custom tools；覆盖率、编译与仿真能力通过 `.opencode/skills/*/SKILL.md` 暴露使用规约，并由受限 `bash` 调用 skill 包内的 Python 脚本

@@ -10,8 +10,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@opencode-ai/sdk": "latest",
-    "@opencode-ai/plugin": "latest"
+    "@opencode-ai/sdk": "latest"
   },
   "devDependencies": {
     "@types/bun": "latest",

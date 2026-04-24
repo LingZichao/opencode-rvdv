@@ -13,7 +13,18 @@ from pathlib import Path
 
 import requests
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+def find_project_root():
+    for parent in Path(__file__).resolve().parents:
+        if (
+            (parent / "opencode.json").exists()
+            or (parent / "coverageDB").exists()
+        ) and (parent / "workspace").exists():
+            return parent
+    return Path.cwd()
+
+
+PROJECT_ROOT = find_project_root()
 COVERAGEDB_ROOT = PROJECT_ROOT / "coverageDB"
 TEMPLATE_ROOT = COVERAGEDB_ROOT / "template"
 

@@ -16,7 +16,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+def find_project_root():
+    for parent in Path(__file__).resolve().parents:
+        if (
+            (parent / "opencode.json").exists()
+            or (parent / "coverageDB").exists()
+        ) and (parent / "workspace").exists():
+            return parent
+    return Path.cwd()
+
+
+PROJECT_ROOT = find_project_root()
 COVERAGEDB_ROOT = PROJECT_ROOT / "coverageDB"
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
 TEMPLATE_ROOT = COVERAGEDB_ROOT / "template"
@@ -57,7 +68,7 @@ def find_script(script_name, task_name):
     raise FileNotFoundError(f"Script not found: {filename}")
 
 
-def run_simulation(script_name, iter_count, task_name):
+def execute_simulation(script_name, iter_count, task_name):
     try:
         isg_scripts_root = get_isg_script_root(task_name)
         isg_scripts_root.mkdir(parents=True, exist_ok=True)
@@ -81,7 +92,7 @@ def run_simulation(script_name, iter_count, task_name):
             return json.dumps(
                 {
                     "error": "Make target 'force_rv' failed",
-                    "suggestion": "Retry fetch_coverage_report; randomness may cause errors",
+                    "suggestion": "Retry the simulation-run command; randomness may cause errors",
                     "stderr": proc.stderr[-500:],
                 }
             )
@@ -117,7 +128,7 @@ def run_simulation(script_name, iter_count, task_name):
                 "cov_report_path": str(vdb_path)
                 if vdb_path
                 else str(sim_root / "work_force" / "simv.vdb"),
-                "note": "call query_coverage to get coverage information",
+                "note": "load coverage-query and query this test name to get coverage information",
             }
         )
     except Exception as e:
@@ -132,4 +143,4 @@ if __name__ == "__main__":
     parser.add_argument("--iter-count", type=int, default=1)
     parser.add_argument("--task-name", required=True)
     args = parser.parse_args()
-    print(run_simulation(args.script_name, args.iter_count, args.task_name))
+    print(execute_simulation(args.script_name, args.iter_count, args.task_name))

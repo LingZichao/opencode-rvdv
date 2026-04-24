@@ -16,7 +16,18 @@ from pathlib import Path
 
 import requests
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+def find_project_root():
+    for parent in Path(__file__).resolve().parents:
+        if (
+            (parent / "opencode.json").exists()
+            or (parent / "coverageDB").exists()
+        ) and (parent / "workspace").exists():
+            return parent
+    return Path.cwd()
+
+
+PROJECT_ROOT = find_project_root()
 COVERAGEDB_ROOT = PROJECT_ROOT / "coverageDB"
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
 TEMPLATE_ROOT = COVERAGEDB_ROOT / "template"
@@ -81,7 +92,7 @@ def query_baseline(args):
         sys.exit(1)
 
 
-def query_coverage(args):
+def query_task_coverage(args):
     module_name = Path(args.rtl_file).stem
 
     if not args.testname:
@@ -193,7 +204,7 @@ def main():
     if args.command == "query-baseline":
         query_baseline(args)
     elif args.command == "query":
-        query_coverage(args)
+        query_task_coverage(args)
     elif args.command == "list-tests":
         list_tests(args)
     else:

@@ -10,7 +10,7 @@ function init() {
 
   fs.rmSync(RUNTIME_DIR, { recursive: true, force: true })
 
-  const modules = ["tools", "commands", "prompts"]
+  const modules = ["commands", "prompts", "skills"]
   for (const mod of modules) {
     const srcMod = path.join(SRC_DIR, mod)
     const destMod = path.join(RUNTIME_DIR, mod)

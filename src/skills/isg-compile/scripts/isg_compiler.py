@@ -11,7 +11,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+def find_project_root():
+    for parent in Path(__file__).resolve().parents:
+        if (
+            (parent / "opencode.json").exists()
+            or (parent / "coverageDB").exists()
+        ) and (parent / "workspace").exists():
+            return parent
+    return Path.cwd()
+
+
+PROJECT_ROOT = find_project_root()
 COVERAGEDB_ROOT = PROJECT_ROOT / "coverageDB"
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
 
@@ -35,11 +46,11 @@ def find_script(script_name, task_name):
     raise FileNotFoundError(f"Script not found: {filename}")
 
 
-def compile_isg(script_name, task_name):
+def compile_script(script_name, task_name):
     try:
         script_path = find_script(script_name, task_name)
 
-        force_riscv_bin = Path(__file__).resolve().parents[2] / "bin" / "friscv"
+        force_riscv_bin = PROJECT_ROOT / "bin" / "friscv"
         if not force_riscv_bin.exists():
             env_bin = Path("/home/c910/force-riscv/bin/friscv")
             if env_bin.exists():
@@ -110,4 +121,4 @@ if __name__ == "__main__":
     parser.add_argument("--script-name", required=True)
     parser.add_argument("--task-name", required=True)
     args = parser.parse_args()
-    print(compile_isg(args.script_name, args.task_name))
+    print(compile_script(args.script_name, args.task_name))

@@ -24,7 +24,7 @@ function setupTools() {
     const resp = execSync("curl -s http://localhost:5000/health", { stdio: "pipe" })
     console.log("  UCAPI server: OK")
   } catch {
-    console.warn("  UCAPI server: NOT RUNNING - start it manually: python src/scripts/ucapi_server.py")
+    console.warn("  UCAPI server: NOT RUNNING - start it manually before coverage queries")
   }
 
 }
