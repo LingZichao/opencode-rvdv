@@ -27,19 +27,6 @@ function setupTools() {
     console.warn("  UCAPI server: NOT RUNNING - start it manually: python src/scripts/ucapi_server.py")
   }
 
-  try {
-    const resp = execSync("curl -s http://localhost:9621/health", { stdio: "pipe" })
-    console.log("  LightRAG (openc910): OK")
-  } catch {
-    console.warn("  LightRAG (openc910): NOT RUNNING on port 9621")
-  }
-
-  try {
-    const resp = execSync("curl -s http://localhost:9622/health", { stdio: "pipe" })
-    console.log("  LightRAG (forcerv): OK")
-  } catch {
-    console.warn("  LightRAG (forcerv): NOT RUNNING on port 9622")
-  }
 }
 
 setupTools()

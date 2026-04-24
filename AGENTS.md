@@ -40,7 +40,7 @@
 
 1. Coordinator接收任务
 2. Coverage Collector收集并查询BASELINE覆盖率
-3. Recognizer识别微架构场景
+3. Coordinator分析RTL与微架构上下文并制定测试计划
 4. Generator生成ISG脚本
 5. 执行仿真并获取覆盖率
 6. 迭代优化直至目标达成

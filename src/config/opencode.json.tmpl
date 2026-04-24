@@ -14,11 +14,25 @@
       "mode": "primary",
       "prompt": "{file:.opencode/prompts/coordinator.md}",
       "color": "primary",
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "edit": false,
+        "write": false,
+        "bash": false,
+        "apply_patch": false,
+        "query_baseline_coverage": false,
+        "query_coverage": false,
+        "list_coverage_tests": false,
+        "fetch_coverage_report": false,
+        "compile_isg": false,
+        "run_simulation": false
+      },
       "permission": {
         "task": {
           "coverage_collector": "allow",
-          "generator": "allow",
-          "recognizer": "allow"
+          "generator": "allow"
         }
       }
     },
@@ -28,12 +42,19 @@
       "mode": "subagent",
       "prompt": "{file:.opencode/prompts/coverage_collector.md}",
       "tools": {
-        "coverage_query": true,
-        "coverage_fetch": true,
-        "coverage_list": true,
         "read": true,
         "grep": true,
-        "glob": true
+        "glob": true,
+        "edit": false,
+        "write": false,
+        "bash": false,
+        "apply_patch": false,
+        "query_baseline_coverage": true,
+        "query_coverage": true,
+        "list_coverage_tests": true,
+        "fetch_coverage_report": true,
+        "compile_isg": false,
+        "run_simulation": false
       }
     },
     
@@ -42,25 +63,19 @@
       "mode": "subagent",
       "prompt": "{file:.opencode/prompts/generator.md}",
       "tools": {
-        "write": true,
-        "edit": true,
-        "isg_compile": true,
-        "isg_run": true,
-        "knowledge-base": true,
-        "read": true
-      }
-    },
-    
-    "recognizer": {
-      "description": "微架构场景识别子代理 - 识别RTL模块行为",
-      "mode": "subagent",
-      "prompt": "{file:.opencode/prompts/recognizer.md}",
-      "tools": {
         "read": true,
         "grep": true,
         "glob": true,
-        "browse": true,
-        "knowledge-base": true
+        "edit": true,
+        "write": true,
+        "bash": false,
+        "apply_patch": false,
+        "compile_isg": true,
+        "run_simulation": true,
+        "query_baseline_coverage": false,
+        "query_coverage": false,
+        "list_coverage_tests": false,
+        "fetch_coverage_report": false
       }
     }
   },
