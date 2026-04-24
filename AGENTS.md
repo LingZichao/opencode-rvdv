@@ -15,7 +15,7 @@
 
 1. 准备运行环境
    - 安装 `bun` 与 `opencode` 命令行工具
-   - 参考 `.env.example` 配置 `.env`，至少补充 `PROJECT_ROOT`、`C910_RTL_ROOT`
+   - 参考 `.env.example` 配置 `.env`，至少补充 `PROJECT_ROOT`
    - 如需自定义服务地址，可额外设置 `OPENCODE_PORT`、`OPENCODE_HOSTNAME`
 
 2. 初始化项目

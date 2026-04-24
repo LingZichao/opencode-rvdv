@@ -265,10 +265,7 @@ function generateConfig() {
   
   const config = template
     .replace(/\{\{PROJECT_ROOT\}\}/g, PROJECT_ROOT)
-    .replace(/\{\{RTL_ROOT\}\}/g, 
-      process.env.C910_RTL_ROOT || 
-      "${PROJECT_ROOT}/workspace/rtl/openc910/C910_RTL_FACTORY/gen_rtl"
-    )
+    .replace(/\{\{RTL_ROOT\}\}/g, "${PROJECT_ROOT}/workspace/openc910")
     .replace(/\{\{COVERAGE_DB\}\}/g, "${PROJECT_ROOT}/coverageDB")
   
   fs.writeFileSync(
@@ -1055,7 +1052,6 @@ bun run init
 cp .env.example .env
 # 编辑 .env 填入:
 # QWEN_API_KEY=your_key
-# C910_RTL_ROOT=/path/to/rtl
 ```
 
 ### 启动Server
