@@ -26,10 +26,6 @@ bun.lockb
 .vscode/
 .idea/
 
-# 测试
-openc910
-.nyc_output/
-
 # 临时文件
 *.tmp
 *.swp
