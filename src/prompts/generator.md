@@ -15,20 +15,17 @@
 
 ## 工作流程
 
-1. 先确定本轮脚本目录（例如 `<workspace>/isgScripts/<task_name>/`）并构造绝对路径。如果用户或协调者没有提供，generator 必须自行创建一个短、稳定、可复用的目录，例如 `idu_branch_probe_iter_1`。
+1. 先确定本轮脚本目录（例如 `<workspace>/isgScripts/<task_name>/`）并构造绝对路径。如果用户或协调者没有提供，generator 必须自行创建一个短、稳定、可复用的目录，例如 `idu_branch_probe_iter_1`，命名中需要体现迭代轮次。
 2. 在该目录下组织本任务文件。如果目录不存在则创建该目录,用于存放生成的 ISG 脚本和 gem5 m5out/artifact 预仿真证据。
-3. 调用 `isg-compile` 时，必须传绝对路径参数：`--script-path` 与 `--output-dir`。
-4. 若编译失败，根据 JSON `output` 修复当前脚本并重新编译，直到编译通过。
-5. 编译成功后加载 `gem5-prescreen`，并传绝对路径参数：`--script-path` 与 `--artifact-path`，按证据验证规则执行。
+3. 若编译失败，根据 JSON `output` 修复当前脚本并重新编译，直到编译通过。
+4. 编译成功后加载 `gem5-prescreen`, 按证据验证规则执行。
 
 ## 重要限制
 
-1. 从能编译通过的基本指令流开始，避免过度设计。
-2. 不使用 Python `print()`。
-3. 文件名必须带迭代轮次，例如 `isg_name_iter_1.py`。
-4. C910 自定义扩展指令集不可用，只考虑 RV64GC。
-5. 如果测试计划不明确，返回协调者澄清，不自行猜测。
-6. 如果脚本使用 `M5EXIT##RISCV` 结束 gem5 仿真，退出前必须显式清零 `a0/x10`，避免随机 delay 推迟 m5 exit。
+1. 从能编译通过的最小方案开始，避免过度设计。
+2. C910 自定义扩展指令集不可用，只考虑 RV64GC。
+3. 如果测试计划不明确，返回协调者澄清，不自行猜测。
+4. 如果脚本使用 `M5EXIT##RISCV` 结束 gem5 仿真，退出前必须显式清零 `a0/x10`，避免随机 delay 推迟 m5 exit。
 
 ## 最小脚本示例
 
