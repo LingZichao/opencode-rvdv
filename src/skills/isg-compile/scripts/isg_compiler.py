@@ -2,7 +2,7 @@
 """
 FORCE-RISCV ISG Compiler - Compile ISG scripts using FORCE-RISCV.
 
-It compiles ISG test scripts from workspace/isgScripts/<task_id>/.
+It compiles ISG test scripts from explicit script paths.
 """
 
 import json
@@ -40,74 +40,35 @@ def load_project_dotenv():
 load_project_dotenv()
 
 
-def get_workspace_root():
-    return (PROJECT_ROOT / "workspace").resolve()
+def resolve_script_path(script_path):
+    if not script_path:
+        raise FileNotFoundError("--script-path is required")
 
-
-WORKSPACE_ROOT = get_workspace_root()
-
-
-def find_coverage_db_root():
-    candidates = [
-        PROJECT_ROOT / ".opencode" / "skills" / "coverage" / "coverageDB",
-        PROJECT_ROOT / "src" / "skills" / "coverage" / "coverageDB",
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return candidates[0]
-
-
-COVERAGEDB_ROOT = find_coverage_db_root()
-TEMPLATE_ROOT = COVERAGEDB_ROOT / "template"
-
-
-def get_isg_script_root(task_name):
-    return WORKSPACE_ROOT / "isgScripts" / task_name
-
-
-def validate_task_name(task_name):
-    if not task_name:
-        return False, "task_name is required"
-    if Path(task_name).name != task_name or task_name in (".", ".."):
-        return False, "task_name must be a single directory name, not a path"
-    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
-    if any(ch not in allowed for ch in task_name):
-        return False, "task_name may only contain ASCII letters, digits, underscore, and hyphen"
-    return True, task_name
-
-
-def get_task_sim_root(task_name):
-    return COVERAGEDB_ROOT / "tasks" / task_name / "sim"
-
-
-def ensure_task_sim_root(task_name):
-    sim_root = get_task_sim_root(task_name)
-    if sim_root.exists():
-        return sim_root
-
-    template_sim = TEMPLATE_ROOT / "sim"
-    sim_root.parent.mkdir(parents=True, exist_ok=True)
-    if template_sim.exists():
-        shutil.copytree(template_sim, sim_root)
+    candidate = Path(script_path).expanduser()
+    if not candidate.is_absolute():
+        candidate = (PROJECT_ROOT / candidate).resolve()
     else:
-        sim_root.mkdir(parents=True, exist_ok=True)
-    return sim_root
+        candidate = candidate.resolve()
+    if not candidate.exists() or not candidate.is_file():
+        raise FileNotFoundError(f"Script path does not exist: {candidate}")
+    if candidate.suffix != ".py":
+        raise FileNotFoundError(f"Script path must point to a .py file: {candidate}")
+    return candidate
 
 
-def find_script(script_name, task_name):
-    filename = script_name if script_name.endswith(".py") else f"{script_name}.py"
-    script_root = get_isg_script_root(task_name)
+def resolve_output_dir(output_dir, script_path):
+    if output_dir:
+        candidate = Path(output_dir).expanduser()
+        if not candidate.is_absolute():
+            candidate = (PROJECT_ROOT / candidate).resolve()
+        else:
+            candidate = candidate.resolve()
+    else:
+        # Default to a sibling directory next to the script to reduce workspace coupling.
+        candidate = (script_path.parent / f"{script_path.stem}_build").resolve()
 
-    candidate = script_root / filename
-    if candidate.exists():
-        return candidate
-
-    for f in script_root.glob("*.py"):
-        if f.stem == Path(filename).stem:
-            return f
-
-    raise FileNotFoundError(f"Script not found: {filename}")
+    candidate.mkdir(parents=True, exist_ok=True)
+    return candidate
 
 
 def candidate_elf_sort_key(path, sim_root, script_stem):
@@ -133,8 +94,7 @@ def candidate_elf_sort_key(path, sim_root, script_stem):
     return (location_rank, name_rank, mtime_rank, str(path))
 
 
-def find_elf_file(task_name, script_name):
-    sim_root = get_task_sim_root(task_name)
+def find_elf_file(sim_root, script_name):
     script_stem = Path(script_name).stem
     expected_names = [f"{script_stem}.Default.ELF", f"{script_stem}.ELF"]
     search_roots = [sim_root, sim_root / "work_force"]
@@ -195,14 +155,11 @@ def resolve_force_riscv_config():
     return candidates[-1]
 
 
-def compile_script(script_name, task_name):
+def compile_script(script_path, output_dir=None):
     try:
-        task_ok, task_result = validate_task_name(task_name)
-        if not task_ok:
-            return json.dumps({"error": task_result})
+        script_path = resolve_script_path(script_path=script_path)
 
-        script_path = find_script(script_name, task_name)
-        sim_root = ensure_task_sim_root(task_name)
+        sim_root = resolve_output_dir(output_dir=output_dir, script_path=script_path)
 
         force_riscv_bin = resolve_force_riscv_bin()
         if force_riscv_bin is None:
@@ -211,9 +168,10 @@ def compile_script(script_name, task_name):
         config_path = resolve_force_riscv_config()
 
         sim_script = sim_root / script_path.name
-        if sim_script.exists():
+        if sim_script.exists() and sim_script.resolve() != script_path.resolve():
             sim_script.unlink()
-        shutil.copy2(str(script_path), str(sim_script))
+        if sim_script.resolve() != script_path.resolve():
+            shutil.copy2(str(script_path), str(sim_script))
 
         proc = subprocess.run(
             [str(force_riscv_bin), "-t", str(sim_script), "-c", str(config_path)],
@@ -231,7 +189,7 @@ def compile_script(script_name, task_name):
                 except OSError:
                     pass
 
-        elf_path = find_elf_file(task_name, script_path.name)
+        elf_path = find_elf_file(sim_root, script_path.name)
 
         output = f"ISG Compilation Results for: {script_path}\n"
         output += "=" * 60 + "\n"
@@ -260,6 +218,7 @@ def compile_script(script_name, task_name):
             "script_path": str(script_path),
             "sim_script_path": str(sim_script),
             "sim_root": str(sim_root),
+            "output_dir": str(sim_root),
             "elf_path": str(elf_path) if elf_path else None,
             "note": "Use gem5-prescreen with this script after successful compilation; generator must not run RTL/VCS simulation.",
         }
@@ -277,7 +236,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--script-name", required=True)
-    parser.add_argument("--task-name", required=True)
+    parser.add_argument("--script-path", required=True)
+    parser.add_argument("--output-dir")
     args = parser.parse_args()
-    print(compile_script(args.script_name, args.task_name))
+    print(
+        compile_script(
+            script_path=args.script_path,
+            output_dir=args.output_dir,
+        )
+    )
