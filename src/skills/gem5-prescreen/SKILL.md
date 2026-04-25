@@ -32,14 +32,14 @@ python3 scripts/gem5_prescreener.py run --script-path <script_path> --artifact-p
 
 ## Parameters
 
-- `script_path`: generator-chosen input path. It may point directly to a compiled `.ELF`, or to a compiled ISG `.py` whose matching `<stem>.Default.ELF` or `<stem>.ELF` is in the same directory or `work_force/`.
-- `artifact_path`: generator-chosen output directory. The runner writes `output.log`, `manifest.json`, `m5out.tar.gz`, and extracted `m5out/` there.
+- `script_path`: generator-chosen absolute input path. It may point directly to a compiled `.ELF`, or to a compiled ISG `.py` whose matching `<stem>.Default.ELF` or `<stem>.ELF` is in the same directory or `work_force/`.
+- `artifact_path`: generator-chosen absolute output directory. The runner writes `output.log`, `manifest.json`, `m5out.tar.gz`, and extracted `m5out/` there.
 - `maxinsts`: gem5 maximum instruction count. Default is `500000`.
 
 ## Path Rules
 
 - This skill does not need `task_name` and does not infer task layout.
-- Pass both paths explicitly. Absolute paths are accepted; `workspace/...` is resolved under the OpenCode workspace; other relative paths are resolved under the project root.
+- Pass both paths explicitly, and both are required absolute paths.
 - If `script_path` points to `.py`, make sure it is the compiled copy or colocated with its ELF. Passing the returned `elf_path` from `isg-compile` is the most direct option.
 
 ## Evidence Workflow
@@ -62,6 +62,6 @@ python3 scripts/gem5_prescreener.py run --script-path <script_path> --artifact-p
 ## Failure Handling
 
 - `No ELF file found`: compile the exact script with `isg-compile` first.
-- `path does not exist`: check `script_path`, or pass the compiled ELF path returned by `isg-compile`.
+- `path must be absolute` or `path does not exist`: check `script_path`/`artifact_path`, or pass the compiled ELF path returned by `isg-compile`.
 - `Error uploading ELF`: gem5 service is unreachable or `GEM5_SERVICE_URL` is wrong.
 - `m5out Downloaded: no`: inspect `output.log` and the manifest; gem5 may have failed before artifacts were available.

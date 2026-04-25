@@ -40,34 +40,32 @@ def load_project_dotenv():
 load_project_dotenv()
 
 
-def resolve_script_path(script_path):
-    if not script_path:
-        raise FileNotFoundError("--script-path is required")
-
-    candidate = Path(script_path).expanduser()
+def resolve_absolute_path(path_arg, arg_name, *, must_exist=False):
+    if not path_arg:
+        raise FileNotFoundError(f"{arg_name} is required")
+    candidate = Path(path_arg).expanduser()
     if not candidate.is_absolute():
-        candidate = (PROJECT_ROOT / candidate).resolve()
-    else:
-        candidate = candidate.resolve()
-    if not candidate.exists() or not candidate.is_file():
-        raise FileNotFoundError(f"Script path does not exist: {candidate}")
+        raise FileNotFoundError(f"{arg_name} must be an absolute path")
+    candidate = candidate.resolve()
+    if must_exist and not candidate.exists():
+        raise FileNotFoundError(f"Path does not exist: {candidate}")
+    return candidate
+
+
+def resolve_script_path(script_path):
+    candidate = resolve_absolute_path(script_path, "--script-path", must_exist=True)
+    if not candidate.is_file():
+        raise FileNotFoundError(f"Script path is not a file: {candidate}")
     if candidate.suffix != ".py":
         raise FileNotFoundError(f"Script path must point to a .py file: {candidate}")
     return candidate
 
 
-def resolve_output_dir(output_dir, script_path):
-    if output_dir:
-        candidate = Path(output_dir).expanduser()
-        if not candidate.is_absolute():
-            candidate = (PROJECT_ROOT / candidate).resolve()
-        else:
-            candidate = candidate.resolve()
-    else:
-        # Default to a sibling directory next to the script to reduce workspace coupling.
-        candidate = (script_path.parent / f"{script_path.stem}_build").resolve()
-
+def resolve_output_dir(output_dir):
+    candidate = resolve_absolute_path(output_dir, "--output-dir")
     candidate.mkdir(parents=True, exist_ok=True)
+    if not candidate.is_dir():
+        raise FileNotFoundError(f"Output path is not a directory: {candidate}")
     return candidate
 
 
@@ -158,8 +156,7 @@ def resolve_force_riscv_config():
 def compile_script(script_path, output_dir=None):
     try:
         script_path = resolve_script_path(script_path=script_path)
-
-        sim_root = resolve_output_dir(output_dir=output_dir, script_path=script_path)
+        sim_root = resolve_output_dir(output_dir=output_dir)
 
         force_riscv_bin = resolve_force_riscv_bin()
         if force_riscv_bin is None:
@@ -237,7 +234,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--script-path", required=True)
-    parser.add_argument("--output-dir")
+    parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
     print(
         compile_script(

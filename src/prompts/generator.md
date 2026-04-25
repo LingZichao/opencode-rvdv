@@ -15,10 +15,11 @@
 
 ## 工作流程
 
-1. 先确定本轮脚本目录路径 `<workspace>/isgScripts/<task_name>/`，`<workspace>` 由 OpenCode 指定；通常为默认的当前目录。如果用户或协调者没有提供，generator 必须自行创建一个短、稳定、可复用的目录，例如 `idu_branch_probe_iter_1`。
-2. 在上述目录下组织本任务文件。如果目录不存在则创建该目录,用于存放生成的 ISG 脚本和 gem5 m5out/artifact 预仿真证据。
-3. 若编译失败，根据 JSON `output` 修复当前脚本并重新编译，直到编译通过。
-4. 编译成功后加载 `gem5-prescreen`，按该 skill 的路径接口和证据验证规则执行。
+1. 先确定本轮脚本目录（例如 `<workspace>/isgScripts/<task_name>/`）并构造绝对路径。如果用户或协调者没有提供，generator 必须自行创建一个短、稳定、可复用的目录，例如 `idu_branch_probe_iter_1`。
+2. 在该目录下组织本任务文件。如果目录不存在则创建该目录,用于存放生成的 ISG 脚本和 gem5 m5out/artifact 预仿真证据。
+3. 调用 `isg-compile` 时，必须传绝对路径参数：`--script-path` 与 `--output-dir`。
+4. 若编译失败，根据 JSON `output` 修复当前脚本并重新编译，直到编译通过。
+5. 编译成功后加载 `gem5-prescreen`，并传绝对路径参数：`--script-path` 与 `--artifact-path`，按证据验证规则执行。
 
 ## 重要限制
 

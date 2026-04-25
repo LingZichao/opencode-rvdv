@@ -30,13 +30,14 @@ python3 scripts/isg_compiler.py --script-path <script_path> --output-dir <output
 
 ## Parameters
 
-- `script_path`: generator-chosen input path to the ISG `.py` script. This path is required in normal usage.
-- `output_dir`: generator-chosen compile output directory. This path is strongly recommended to pass explicitly. If omitted, default is a sibling directory next to the script: `<script_dir>/<script_stem>_build/`.
+- `script_path`: generator-chosen absolute path to the ISG `.py` script. This path is required.
+- `output_dir`: generator-chosen absolute output directory. This path is required.
 
 ## Workspace and Path Rules
 
 - Use the OpenCode project workspace. Do not invent or read a separate workspace override environment variable.
 - Pass both `script_path` and `output_dir` explicitly in generator flow to avoid hidden coupling.
+- `script_path` and `output_dir` must be absolute paths.
 
 ## Workflow
 
@@ -58,8 +59,8 @@ python3 scripts/isg_compiler.py --script-path <script_path> --output-dir <output
 ## Failure Handling
 
 - `FORCE-RISCV binary not found`: the local FORCE-RISCV installation or config path is missing.
-- `Script not found`: confirm `--script-path` points to an existing `.py`.
-- Output path issue: confirm `--output-dir` is writable.
+- `Script not found`: confirm `--script-path` is an absolute path to an existing `.py`.
+- Output path issue: confirm `--output-dir` is an absolute writable directory and not a file path.
 - `Compilation timed out`: simplify the script or reduce generation complexity.
 - Nonzero `exit_code`: use stderr/stdout in `output` to repair imports, instruction names, or API usage.
 - Missing `elf_path` after success: inspect `output_dir` and FORCE-RISCV stdout; gem5 pre-screen needs a matching `<script_stem>.Default.ELF` or `<script_stem>.ELF`.

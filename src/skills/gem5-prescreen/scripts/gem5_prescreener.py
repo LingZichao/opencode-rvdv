@@ -16,13 +16,13 @@ import tarfile
 import time
 from pathlib import Path
 
-import requests
+import requests  # type: ignore[reportMissingModuleSource]
 
 
 DEFAULT_GEM5_SERVICE_URL = "http://192.168.122.1:8002"
 POLL_INTERVAL = 3
 POLL_TIMEOUT = 600
-NO_PROXY = {"http": None, "https": None}
+NO_PROXY = {"http": "", "https": ""}
 
 
 def path_is_relative_to(path, root):
@@ -61,32 +61,20 @@ def load_project_dotenv():
 load_project_dotenv()
 
 
-def get_workspace_root():
-    return (PROJECT_ROOT / "workspace").resolve()
-
-
-WORKSPACE_ROOT = get_workspace_root()
-
-
 def get_gem5_service_url():
     return os.getenv("GEM5_SERVICE_URL", DEFAULT_GEM5_SERVICE_URL).rstrip("/")
 
 
-def resolve_path_arg(path_arg, *, must_exist=False):
+def resolve_absolute_path(path_arg, arg_name, *, must_exist=False):
+    if not path_arg:
+        raise FileNotFoundError("%s is required" % arg_name)
     raw_path = Path(path_arg).expanduser()
-    if raw_path.is_absolute():
-        candidate = raw_path.resolve()
-    elif str(raw_path) == "workspace" or str(raw_path).startswith("workspace/"):
-        rel_path = Path(str(raw_path)[len("workspace/") :]) if str(raw_path) != "workspace" else Path(".")
-        candidate = (WORKSPACE_ROOT / rel_path).resolve()
-    else:
-        project_candidate = (PROJECT_ROOT / raw_path).resolve()
-        workspace_candidate = (WORKSPACE_ROOT / raw_path).resolve()
-        candidate = project_candidate if project_candidate.exists() or not workspace_candidate.exists() else workspace_candidate
-
+    if not raw_path.is_absolute():
+        raise FileNotFoundError("%s must be an absolute path: %s" % (arg_name, path_arg))
+    candidate = raw_path.resolve()
     if must_exist and not candidate.exists():
-        return False, "path does not exist: %s" % candidate
-    return True, candidate
+        raise FileNotFoundError("path does not exist: %s" % candidate)
+    return candidate
 
 
 def write_text(path, content):
@@ -122,19 +110,15 @@ def candidate_elf_sort_key(path, primary_root, script_stem):
 
 
 def find_elf_file(script_path):
-    resolved_ok, resolved_or_error = resolve_path_arg(script_path, must_exist=True)
-    if not resolved_ok:
-        return False, resolved_or_error
-
-    input_path = resolved_or_error
+    input_path = resolve_absolute_path(script_path, "--script-path", must_exist=True)
     if input_path.suffix.upper() == ".ELF":
         if input_path.is_file():
-            return True, str(input_path)
-        return False, "ELF path is not a file: %s" % input_path
+            return input_path
+        raise FileNotFoundError("ELF path is not a file: %s" % input_path)
 
     script_stem = input_path.stem
     if not script_stem:
-        return False, "Invalid script_path: %r" % script_path
+        raise FileNotFoundError("Invalid script_path: %r" % script_path)
 
     expected_names = ["%s.Default.ELF" % script_stem, "%s.ELF" % script_stem]
     primary_root = input_path.parent
@@ -148,7 +132,7 @@ def find_elf_file(script_path):
         for name in expected_names:
             candidate = root / name
             if candidate.exists() and candidate.is_file():
-                return True, str(candidate)
+                return candidate
 
     for root in search_roots:
         if not root.exists():
@@ -166,10 +150,9 @@ def find_elf_file(script_path):
             seen.add(candidate)
 
     if matches:
-        best_match = sorted(matches, key=lambda path: candidate_elf_sort_key(path, primary_root, script_stem))[0]
-        return True, str(best_match)
+        return sorted(matches, key=lambda path: candidate_elf_sort_key(path, primary_root, script_stem))[0]
 
-    return False, (
+    raise FileNotFoundError(
         "No ELF file found for script path '%s'\nSearched in: %s\nExpected one of: %s\n"
         "Pass an ELF path directly, or pass the compiled script path from the isg-compile output directory."
         % (input_path, primary_root, ", ".join(expected_names))
@@ -275,16 +258,12 @@ def download_m5out(task_id, artifact_dir):
 
 
 def run_gem5_prescreen(script_path, artifact_path, maxinsts=500000):
-    found, elf_result = find_elf_file(script_path)
-    if not found:
-        return "Error: %s" % elf_result
-
-    artifact_ok, artifact_or_error = resolve_path_arg(artifact_path)
-    if not artifact_ok:
-        return "Error: %s" % artifact_or_error
-    artifact_dir = artifact_or_error
-
-    elf_path = Path(elf_result)
+    try:
+        resolved_script_path = resolve_absolute_path(script_path, "--script-path", must_exist=True)
+        artifact_dir = resolve_absolute_path(artifact_path, "--artifact-path")
+        elf_path = find_elf_file(script_path)
+    except FileNotFoundError as exc:
+        return "Error: %s" % exc
     try:
         with elf_path.open("rb") as handle:
             upload_response = requests.post(
@@ -362,7 +341,7 @@ def run_gem5_prescreen(script_path, artifact_path, maxinsts=500000):
 
     manifest_path = artifact_dir / "manifest.json"
     manifest = {
-        "script_path": str(resolve_path_arg(script_path)[1]),
+        "script_path": str(resolved_script_path),
         "task_id": task_id,
         "elf_file": str(elf_path),
         "artifact_path": str(artifact_dir),
@@ -398,7 +377,7 @@ def run_gem5_prescreen(script_path, artifact_path, maxinsts=500000):
         "status": final_status,
         "exit_code": exit_code,
         "task_id": task_id,
-        "script_path": str(resolve_path_arg(script_path)[1]),
+        "script_path": str(resolved_script_path),
         "elf_file": str(elf_path),
         "artifact_path": str(artifact_dir),
         "output_log": str(output_log_path),
