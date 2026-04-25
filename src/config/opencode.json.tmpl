@@ -57,8 +57,8 @@
         },
         "bash": {
           "*": "deny",
-          "python3 .opencode/skills/coverage/scripts/ucapi_client.py *": "allow",
-          "python3 .opencode/skills/coverage/scripts/simulation_runner.py *": "allow"
+          "python3 scripts/ucapi_client.py *": "allow",
+          "python3 scripts/simulation_runner.py *": "allow"
         },
         "edit": "deny"
       }
@@ -86,8 +86,8 @@
         },
         "bash": {
           "*": "deny",
-          "python3 .opencode/skills/isg-compile/scripts/isg_compiler.py *": "allow",
-          "python3 .opencode/skills/simulation-run/scripts/simulation_runner.py *": "allow"
+          "python3 scripts/isg_compiler.py *": "allow",
+          "python3 scripts/simulation_runner.py *": "allow"
         },
         "edit": "allow"
       }
@@ -118,11 +118,6 @@
       "agent": "coordinator"
     }
   },
-
-  "instructions": [
-    "workspace/agentDoc/C910ISA_Agent_Friendly.md",
-    "workspace/agentDoc/condition_coverage.md"
-  ],
 
   "permission": {
     "read": "allow",
