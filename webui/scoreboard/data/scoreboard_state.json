@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-03-26T09:17:25",
+  "updated_at": "2026-03-26T11:06:28",
+  "active_kind": "branch",
+  "max_exec_count": 3,
+  "parallelism": 4,
+  "group_pointer": 0,
+  "baseline_vdb_path": "/home/c910/lingzichao/AgenticISG/coverageDB/template/BASELINE.vdb",
+  "merged_vdb_path": "/home/c910/lingzichao/AgenticISG/coverageDB/regression/long_agent_scoreboard/merged_cov.vdb",
+  "last_refresh_vdb_path": "/home/c910/lingzichao/AgenticISG/coverageDB/regression/long_agent_scoreboard/merged_cov.vdb",
+  "last_refresh_at": "2026-03-26T11:06:28",
+  "last_merge_version": 1,
+  "inflight": {
+    "modules[1577].vps[0]": {
+      "selected_at": "2026-03-26T10:38:44",
+      "completed_at": "",
+      "inflight_agent_id": "",
+      "task_name": "",
+      "task_vdb_path": "",
+      "isg_script": ""
+    },
+    "modules[2170].vps[140]": {
+      "selected_at": "2026-03-26T10:38:44",
+      "completed_at": "",
+      "inflight_agent_id": "",
+      "task_name": "",
+      "task_vdb_path": "",
+      "isg_script": ""
+    },
+    "modules[2316].vps[40]": {
+      "selected_at": "2026-03-26T10:42:54",
+      "completed_at": "",
+      "inflight_agent_id": "",
+      "task_name": "",
+      "task_vdb_path": "",
+      "isg_script": ""
+    }
+  },
+  "stale_inflight": {}
+}

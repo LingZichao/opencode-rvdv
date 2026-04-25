@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgenticISG Scoreboard</title>
+  <link rel="stylesheet" href="/scoreboard/static/scoreboard.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">AgenticISG / Scoreboard</p>
+        <h1>Long-Run Coverage Monitor</h1>
+        <p class="hero-copy">
+          Live scoreboard view over execution state, aggregate coverage, and full CSV scheduling data.
+        </p>
+      </div>
+      <div class="hero-status">
+        <span id="connection-badge" class="connection-badge connection-connecting">Connecting</span>
+        <span id="snapshot-version" class="snapshot-version">snapshot -</span>
+      </div>
+    </header>
+
+    <section class="top-grid">
+      <section class="panel info-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Runtime Summary</p>
+            <h2>Current execution snapshot</h2>
+          </div>
+          <div class="summary-highlight">
+            <span class="summary-label">Overall executable coverage</span>
+            <span id="overall-coverage-value" class="summary-value">0.00%</span>
+          </div>
+        </div>
+
+        <div class="summary-hero">
+          <div class="summary-main">
+            <span class="summary-label">Active kind</span>
+            <span id="active-kind" class="summary-main-value">-</span>
+          </div>
+          <div class="summary-sub">
+            <span class="summary-label">Active kind executable coverage</span>
+            <span id="active-kind-coverage" class="summary-sub-value">0.00%</span>
+          </div>
+        </div>
+
+        <div id="summary-grid" class="summary-grid"></div>
+
+        <div class="info-footer">
+          <div>
+            <span class="meta-label">Scoreboard root</span>
+            <span id="scoreboard-root" class="meta-value">-</span>
+          </div>
+          <div>
+            <span class="meta-label">Last refresh</span>
+            <span id="last-refresh" class="meta-value">-</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel chart-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Coverage Curve</p>
+            <h2>Total executable coverage</h2>
+          </div>
+          <div class="chart-meta">
+            <span class="meta-label">Latest point</span>
+            <span id="chart-latest" class="meta-value">0.00%</span>
+          </div>
+        </div>
+
+        <div class="chart-frame">
+          <svg id="coverage-chart" viewBox="0 0 880 320" preserveAspectRatio="none" aria-label="Coverage curve"></svg>
+        </div>
+        <div id="chart-legend" class="chart-legend"></div>
+      </section>
+    </section>
+
+    <section class="panel table-panel">
+      <div class="panel-header table-header">
+        <div>
+          <p class="panel-kicker">Scoreboard Table</p>
+          <h2>Realtime scheduling rows</h2>
+        </div>
+        <div class="table-meta">
+          <span class="meta-label">Filtered rows</span>
+          <span id="filtered-count" class="meta-value">0</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <label class="toolbar-field toolbar-search">
+          <span>Search</span>
+          <input id="search-input" type="search" placeholder="Search vp_id, instance, status, script...">
+        </label>
+
+        <label class="toolbar-field">
+          <span>Kind</span>
+          <select id="kind-filter"></select>
+        </label>
+
+        <label class="toolbar-field">
+          <span>VP Group</span>
+          <select id="vp-group-filter"></select>
+        </label>
+
+        <label class="toolbar-field">
+          <span>Status</span>
+          <select id="status-filter"></select>
+        </label>
+
+        <label class="toolbar-field">
+          <span>Running State</span>
+          <select id="running-state-filter"></select>
+        </label>
+      </div>
+
+      <div id="table-shell" class="table-shell">
+        <table class="scoreboard-table">
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="/scoreboard/static/scoreboard.js"></script>
+</body>
+</html>
