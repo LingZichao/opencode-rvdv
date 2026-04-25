@@ -23,10 +23,7 @@ def _resolve_path_override(*env_names: str) -> Path | None:
 
 
 def get_workspace_root() -> Path:
-    """Return the static runtime workspace root."""
-    override = _resolve_path_override("AGENTICISG_WORKSPACE_ROOT")
-    if override:
-        return override
+    """Return the OpenCode project workspace root."""
     return get_project_root() / "workspace"
 
 

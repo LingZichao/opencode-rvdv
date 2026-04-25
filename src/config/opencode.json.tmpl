@@ -82,12 +82,12 @@
         "skill": {
           "*": "deny",
           "isg-compile": "allow",
-          "simulation-run": "allow"
+          "gem5-prescreen": "allow"
         },
         "bash": {
           "*": "deny",
           "python3 scripts/isg_compiler.py *": "allow",
-          "python3 scripts/simulation_runner.py *": "allow"
+          "python3 scripts/gem5_prescreener.py run *": "allow"
         },
         "edit": "allow"
       }
@@ -107,8 +107,8 @@
       "subtask": true
     },
     "generate": {
-      "description": "仅生成ISG脚本（不执行仿真）",
-      "template": "根据以下测试计划生成ISG脚本: $ARGUMENTS",
+      "description": "生成ISG脚本并完成gem5预筛选（不执行RTL仿真）",
+      "template": "根据以下测试计划生成ISG脚本并完成gem5预筛选，不执行RTL/VCS仿真: $ARGUMENTS",
       "agent": "generator",
       "subtask": true
     },

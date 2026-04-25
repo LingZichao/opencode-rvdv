@@ -70,7 +70,7 @@ Successful output includes `test_name` and `cov_report_path`. Use `test_name` wi
 - `kind`: coverage kind. Prefer `line+cond+vp` for initial analysis.
 - `task_name`: runtime task directory name under `.opencode/skills/coverage/coverageDB/tasks/<task_name>/`.
 - `test_name`: test name returned by `list-tests`; do not guess it.
-- `script_name`: ISG Python script under `workspace/isgScripts/<task_name>/`.
+- `script_name`: ISG Python script under the generator-chosen task script path.
 - `iter_count`: iteration number used in the generated test name.
 
 ## Failure Handling
@@ -80,4 +80,4 @@ Successful output includes `test_name` and `cov_report_path`. Use `test_name` wi
 - `testname is REQUIRED`: call `list-tests` and retry with an actual returned test name.
 - `No .vdb found`: run the fetch/simulation command first or query BASELINE instead.
 - `Simulation directory not found`: initialize the task simulation directory from the skill-local template.
-- `Script not found`: ensure the script exists under `workspace/isgScripts/<task_name>/`.
+- `Script not found`: ensure the script exists under the generator-chosen task script path.
