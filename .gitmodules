@@ -1,0 +1,4 @@
+[submodule "AgenticPipeViewer"]
+	path = src/skills/fsdb-sampling/AgenticPipeViewer
+	url = https://github.com/LingZichao/AgenticPipeViewer.git
+	branch = dev
