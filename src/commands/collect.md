@@ -1,6 +1,6 @@
 ---
 description: 仅收集/查询覆盖率（不生成脚本）
-agent: coverage_collector
+agent: collector
 subtask: true
 ---
 

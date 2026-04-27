@@ -8,10 +8,14 @@
     "mdnsDomain": "rvdv.local"
   },
 
+  "model": "deepseek/deepseek-v4-pro",
+  "small_model": "deepseek/deepseek-v4-flash",
+
   "agent": {
     "coordinator": {
       "description": "主协调Agent - 规划RISC-V验证迭代流程",
       "mode": "primary",
+      "model": "deepseek/deepseek-v4-pro",
       "prompt": "{file:.opencode/prompts/coordinator.md}",
       "color": "primary",
       "tools": {
@@ -30,16 +34,24 @@
           "coverage": "allow"
         },
         "task": {
-          "coverage_collector": "allow",
+          "collector": "allow",
+          "explore": "allow",
           "generator": "allow"
         }
       }
     },
 
-    "coverage_collector": {
+    "explore": {
+      "description": "内置只读探索子代理 - 快速检索和分析代码库上下文",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash"
+    },
+
+    "collector": {
       "description": "覆盖率收集子代理 - 获取、查询并整理覆盖率报告",
       "mode": "subagent",
-      "prompt": "{file:.opencode/prompts/coverage_collector.md}",
+      "model": "deepseek/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/collector.md}",
       "tools": {
         "read": true,
         "grep": true,
@@ -67,6 +79,7 @@
     "generator": {
       "description": "ISG脚本生成子代理 - 生成FORCE-RISCV测试脚本",
       "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash",
       "prompt": "{file:.opencode/prompts/generator.md}",
       "tools": {
         "read": true,
@@ -103,7 +116,7 @@
     "collect": {
       "description": "仅收集/查询覆盖率（不生成脚本）",
       "template": "收集并查询RTL文件 $1 行号范围 $2 的覆盖率情况",
-      "agent": "coverage_collector",
+      "agent": "collector",
       "subtask": true
     },
     "generate": {

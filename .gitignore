@@ -40,10 +40,3 @@ __pycache__/
 .Python
 .venv/
 venv/
-
-# RTL镜像（通常通过软链接）
-workspace/rtl/
-
-# 仿真运行输出
-workspace/simRuns/*
-!workspace/simRuns/.gitkeep
