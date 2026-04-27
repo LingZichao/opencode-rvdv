@@ -2,6 +2,8 @@
 
 ## Minimal IFU Fetch to IDU Lane
 
+This example keeps the identity chain explicit: fetch captures PC and packed instruction data; IFDP ties current VPC to the captured PC; IDU lane selection uses a pattern variable and split membership against captured packed data.
+
 ```yaml
 fsdbFile: /abs/path/to/novas.fsdb
 globalClock: tb.clk
@@ -54,6 +56,53 @@ tasks:
       - ifu_idu_ib_inst{idx}_data
     logging:
       - "[IDU_LANE_WAY0] lane={idx} inst={ifu_idu_ib_inst{idx}_data:x}"
+```
+
+## Explicit Sibling Handoffs
+
+Use sibling tasks when each terminal path needs a distinct condition. Do not collapse these to one pipe unless local evidence proves only one pipe can carry the instruction.
+
+```yaml
+tasks:
+  - id: decode_entry
+    name: "Decode entry"
+    matchMode: first
+    condition:
+      - "id_inst0_vld == 1'b1"
+      - "&& id_inst0_data[31:0] == 32'h00a58533"
+    capture:
+      - id_inst0_data
+      - id_inst0_pc
+    logging:
+      - "[DECODE] pc={id_inst0_pc:x} inst={id_inst0_data:x}"
+
+  - id: pipe0_accept
+    name: "Pipe0 accepts decode inst"
+    dependsOn: decode_entry
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "pipe0_vld == 1'b1"
+      - "&& pipe0_inst[31:0] == $dep.decode_entry.id_inst0_data[31:0]"
+    capture:
+      - pipe0_inst
+      - pipe0_iid
+    logging:
+      - "[PIPE0] iid={pipe0_iid} inst={pipe0_inst:x}"
+
+  - id: pipe1_accept
+    name: "Pipe1 accepts decode inst"
+    dependsOn: decode_entry
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "pipe1_vld == 1'b1"
+      - "&& pipe1_inst[31:0] == $dep.decode_entry.id_inst0_data[31:0]"
+    capture:
+      - pipe1_inst
+      - pipe1_iid
+    logging:
+      - "[PIPE1] iid={pipe1_iid} inst={pipe1_inst:x}"
 ```
 
 ## IDU Rename to Issue by IID
@@ -113,3 +162,26 @@ tasks:
     logging:
       - "[EXEC_COMPLETE] iid={$dep.rob_create0.rtu_idu_rob_inst0_iid}"
 ```
+
+## Conservative Partial Pattern
+
+When only a valid gate is visible and the local route has stronger-but-unavailable identity signals, keep the YAML exploratory and report the result as partial.
+
+```yaml
+tasks:
+  - id: weak_handoff_probe
+    name: "Weak handoff probe"
+    dependsOn: decode_entry
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "handoff_vld == 1'b1"
+      - "&& !local_stall"
+    capture:
+      - handoff_vld
+      - local_stall
+    logging:
+      - "[WEAK_HANDOFF] vld={handoff_vld} stall={local_stall}"
+```
+
+Report note: this proves a local handoff event, not same-instruction identity. Add PC, instruction bits, data slice, IID, ROB id, queue id, or tag equality before calling the route complete.

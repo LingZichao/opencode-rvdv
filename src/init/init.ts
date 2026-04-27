@@ -57,6 +57,7 @@ function createDirectories() {
     "workspace/agentDoc",
     "workspace/ISG_Script",
     "workspace/isgScripts",
+    "workspace/apvTraces",
     "workspace/openc910",
     "workspace/rtl",
     ".opencode/skills/coverage/coverageDB/tasks",

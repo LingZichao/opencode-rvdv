@@ -36,7 +36,8 @@
         "task": {
           "collector": "allow",
           "explore": "allow",
-          "generator": "allow"
+          "generator": "allow",
+          "instracer": "allow"
         }
       }
     },
@@ -104,6 +105,34 @@
         },
         "edit": "allow"
       }
+    },
+
+    "instracer": {
+      "description": "指令运行轨迹采样子代理 - 编写APV YAML并从FSDB收集指令运行数据",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/instracer.md}",
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "skill": true,
+        "edit": true,
+        "write": true,
+        "bash": true,
+        "apply_patch": false
+      },
+      "permission": {
+        "skill": {
+          "*": "deny",
+          "fsdb-sampling": "allow"
+        },
+        "bash": {
+          "*": "deny",
+          "python3 .opencode/skills/fsdb-sampling/AgenticPipeViewer/view.py *": "allow"
+        },
+        "edit": "allow"
+      }
     }
   },
 
@@ -123,6 +152,12 @@
       "description": "生成ISG脚本并完成gem5预筛选（不执行RTL仿真）",
       "template": "根据以下测试计划生成ISG脚本并完成gem5预筛选，不执行RTL/VCS仿真: $ARGUMENTS",
       "agent": "generator",
+      "subtask": true
+    },
+    "trace": {
+      "description": "编写APV采样脚本并从FSDB收集指令运行数据",
+      "template": "根据以下FSDB采样需求编写APV YAML并收集指令运行数据。参数应包含FSDB路径、globalClock、scope、目标事件/指令、identity anchors以及可选输出路径: $ARGUMENTS",
+      "agent": "instracer",
       "subtask": true
     },
     "status": {

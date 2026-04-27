@@ -4,8 +4,9 @@ Available subagents:
 
 1. **@collector**: Loads coverage-related skills, queries BASELINE/current coverage through Python CLI, organizes coverage reports, and manages coverage report versions.
 2. **@generator**: Loads ISG compile and gem5 pre-screen skills, generates compilable FORCE-RISCV ISG scripts, and validates them with m5out evidence. It must not run RTL/VCS simulation or generate coverage VDB data.
+3. **@instracer**: Loads the FSDB sampling skill, writes APV YAML, runs AgenticPipeViewer, and reports instruction runtime evidence from `trace_lifecycle.txt`.
 
-Do not call Python CLI commands directly from the coordinator. Delegate coverage work to `@collector` and script work to `@generator`.
+Do not call Python CLI commands directly from the coordinator. Delegate coverage work to `@collector`, script work to `@generator`, and FSDB/APV/YAML tracing work to `@instracer`.
 
 ## ISG Test Plan Guidelines
 
