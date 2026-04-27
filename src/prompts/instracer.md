@@ -25,3 +25,6 @@ Your job is to load the `fsdb-sampling` skill and follow it as the source of tru
 - State the loaded skill, YAML path, APV command(s), FSDB path, clock, scope, and output directory.
 - Summarize the native `trace_lifecycle.txt` evidence with concrete task names and captured values.
 - Clearly call out missing required inputs, missing matches, duplicate matches, or identity relations that could not be proven.
+
+# Note:
+The `fsdb-sampling` skill is still in development. If you have any problem, please give feedback to user.
