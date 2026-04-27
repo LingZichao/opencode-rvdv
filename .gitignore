@@ -35,6 +35,8 @@ openc910
 Thumbs.db
 workspace/apvTraces/**/report/deps.png
 workspace/apvTraces/**/report/fsdb_dump.txt
+workspace/apvTraces/**/report/trace_lifecycle.txt
+
 
 # Python
 __pycache__/
