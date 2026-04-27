@@ -127,6 +127,16 @@ Use explicit report language:
 - Read `references/authoring-patterns.md` for instruction identity and branching patterns.
 - Read `references/examples.md` for compact IFU/IDU/RTU-style examples.
 
+## Preview
+
+The full `trace_lifecycle.txt` includes every captured signal value and is often very long. Generate a compact preview with:
+
+```bash
+python3 .opencode/skills/fsdb-sampling/preview_trace.py <output.directory>/trace_lifecycle.txt
+```
+
+The preview shows one row per pipeline stage with LOG lines and timing — no captured signals.
+
 ## Output Contract
 
 APV keeps its native outputs. The primary report is:
