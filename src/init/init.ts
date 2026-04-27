@@ -23,6 +23,7 @@ function init() {
   generateConfig()
   validateEnvironment()
   createDirectories()
+  validateSimulationTemplate()
 
   console.log("Initialization complete!")
   console.log("   Run: ./scripts/start-server.sh")
@@ -56,6 +57,7 @@ function createDirectories() {
     "workspace/agentDoc",
     "workspace/ISG_Script",
     "workspace/isgScripts",
+    "workspace/openc910",
     "workspace/rtl",
     ".opencode/skills/coverage/coverageDB/tasks",
     ".opencode/skills/coverage/coverageDB/regression",
@@ -67,6 +69,20 @@ function createDirectories() {
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(fullPath, { recursive: true })
     }
+  }
+}
+
+function validateSimulationTemplate() {
+  const templateRoot = path.join(PROJECT_ROOT, "workspace", "openc910", "smart_run")
+  const required = [
+    path.join(templateRoot, "makefileFRV"),
+    path.join(templateRoot, "AgenticTargetTest.py"),
+    path.join(templateRoot, "logical", "filelists", "sim.fl"),
+    path.join(templateRoot, "tests", "bin", "Srec2vmem"),
+  ]
+  const missing = required.filter((item) => !fs.existsSync(item))
+  if (missing.length > 0) {
+    throw new Error("workspace/openc910/smart_run is incomplete. Missing: " + missing.join(", "))
   }
 }
 

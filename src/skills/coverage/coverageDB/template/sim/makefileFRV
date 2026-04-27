@@ -15,15 +15,17 @@
 
 # make -f makefileFRV clean
 
-FORCE_RV_BIN = /home/c910/force-riscv/bin/friscv
+FORCE_RV_BIN ?= /home/c910/force-riscv/bin/friscv
 RISCV_OBJCOPY = $(RISCV_TOOL)/bin/riscv64-unknown-elf-objcopy
-SREC2VMEM = /home/c910/openc910/smart_run/tests/bin/Srec2vmem
+SREC2VMEM ?= ../tests/bin/Srec2vmem
+CODE_BASE_PATH ?= ../C910_RTL_FACTORY
+export CODE_BASE_PATH
 
 # TEST = aiq0_branch_coverage_test
 # TEST = my_forcerv_test
 TEST = AgenticTargetTest
 TEST_PY = $(TEST).py
-CONFIG_FILE = /home/c910/force-riscv/config/riscv_rv64_c910.config
+CONFIG_FILE ?= /home/c910/force-riscv/config/riscv_rv64_c910.config
 
 ELF_FILE = ${TEST}.Default.ELF
 HEX_FILE = inst.hex
@@ -32,19 +34,11 @@ PAT_FILE = inst.pat
 WORK_DIR = work_force
 COV_DIR = ${TEST}.vdb
 
-# FORCE_RV_CONSTRAINPY_REPO = /home/c910/wangyahao/openc910/smart_run
-# FORCE_RV_CONSTRAINPY_REPO = /home/c910/lingzichao/openc910/smart_run/ForceRvConstrainPyRepo
-COV_RESULT_REPO = /home/c910/openc910/smart_run/CovResultRepo
-
-# for AgenticISG
-AGENTIC_ISG = /home/c910/wangyahao/AgenticISG
-TASK_NAME = task_default
-COVDB_NAME = $(TASK_NAME).vdb
-ITER_NUM = 0
-TEST_NAME = $(TASK_NAME)_iter_$(ITER_NUM)
-COVTEST = $(TEST_NAME)
-# AGENTICISG_WORK_SPACE = $(AGENTIC_ISG)/target
-# AGENTICISG_WORK_SPACE = ../..
+FORCE_RV_CONSTRAINPY_REPO ?= .
+# FORCE_RV_CONSTRAINPY_REPO ?= ./ForceRvConstrainPyRepo
+COV_RESULT_REPO ?= CovResultRepo
+ITER_NUM ?= 0
+COVTEST ?= AgenticTargetTest_iter_0
 
 .PHONY: all clean compile run force_rv setup view_cov html_cov text_cov view_text_cov merge_cov
 
@@ -55,7 +49,7 @@ setup:
 	
 
 force_rv:
-	cp ./$(TEST_PY) $(WORK_DIR)/
+	cp $(FORCE_RV_CONSTRAINPY_REPO)/$(TEST_PY) $(WORK_DIR)/
 	cd $(WORK_DIR) && \
 	$(FORCE_RV_BIN) -t $(TEST_PY) --cfg $(CONFIG_FILE) > frv.log && \
 	$(RISCV_OBJCOPY) -O srec $(ELF_FILE) $(HEX_FILE) && \
@@ -66,18 +60,14 @@ compile:
 	vcs -sverilog -top tb -full64 -kdb -lca -debug_access +nospecify +notimingchecks +lint=TFIPC-L \
 	    -debug_acc+all -debug_region+cell+encrypt -timescale=1ns/100fs \
 	    +define+no_warning +define+TSMC_NO_WARNING +define+COVER_ON \
-	    -cm line+cond+fsm+branch+tgl -cm_dir \
+	    -cm line+cond+fsm+branch+tgl \
 	    -f ../logical/filelists/sim.fl -l comp.vcs.log
 
-# 如果轮次为0，删除已有的测试数据
 run:
 	cd $(WORK_DIR) && \
-	if [ "$(ITER_NUM)" = "1" ]; then \
-		rm -rf ./simv.vdb/snps/coverage/db/testdata/*; \
-	fi \
-	&& ./simv -cm line+cond+fsm+branch+tgl -cm_name $(COVTEST) -cm_dir simv.vdb -l simv.log \
- 	&& cp -r ./simv.vdb ../../
-# 	&& cp -r ./simv.vdb $(AGENTICISG_WORK_SPACE)/
+	./simv -cm line+cond+fsm+branch+tgl -cm_name $(COVTEST) -cm_dir simv.vdb -l simv.log 
+# 	&& cp -r ./$(COV_DIR) $(COV_RESULT_REPO)/
+
 view_cov:
 	cd $(WORK_DIR) && \
 	dve -cov -dir ./$(COV_DIR) &

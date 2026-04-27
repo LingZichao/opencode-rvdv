@@ -1,159 +1,172 @@
 #!/usr/bin/env python3
 """
-VCS Simulation Runner - Execute simulation and fetch coverage report.
+VCS Simulation Runner - Execute FORCE-RISCV generation and RTL simulation.
 
-This script is called by TypeScript tool wrappers via Bun subprocess.
-Steps:
-1. Copy ISG script to simulation directory
-2. Run FORCE-RISCV to generate instructions (make force_rv)
-3. Execute VCS simulation (make run)
-4. Return VDB path for coverage query
+The runner uses the migrated OpenC910 smart_run flow directly:
+1. Copy the requested ISG script to workspace/openc910/smart_run/AgenticTargetTest.py
+2. Run FORCE-RISCV to generate instructions through makefileFRV
+3. Compile the OpenC910 simulation binary through makefileFRV
+4. Execute the simulator in workspace/openc910/smart_run/work_force
+5. Return the fixed smart_run/work_force/simv.vdb path for coverage queries
 """
 
 import json
+import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
+
+
+def path_is_relative_to(path, root):
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def find_project_root():
     for parent in Path(__file__).resolve().parents:
-        if (
-            (parent / "opencode.json").exists()
-            or (parent / "coverageDB").exists()
-        ) and (parent / "workspace").exists():
+        if (parent / "opencode.json").exists() or (parent / "package.json").exists():
             return parent
     return Path.cwd()
 
 
 PROJECT_ROOT = find_project_root()
-SKILL_ROOT = Path(__file__).resolve().parents[1]
-COVERAGEDB_ROOT = SKILL_ROOT / "coverageDB"
 WORKSPACE_ROOT = PROJECT_ROOT / "workspace"
-TEMPLATE_ROOT = COVERAGEDB_ROOT / "template"
+SMART_RUN_ROOT = WORKSPACE_ROOT / "openc910" / "smart_run"
+WORK_FORCE_ROOT = SMART_RUN_ROOT / "work_force"
+VDB_PATH = WORK_FORCE_ROOT / "simv.vdb"
+CODE_BASE_PATH = WORKSPACE_ROOT / "openc910" / "C910_RTL_FACTORY"
+REQUIRED_SMART_RUN_FILES = [
+    Path("makefileFRV"),
+    Path("logical") / "filelists" / "sim.fl",
+    Path("tests") / "bin" / "Srec2vmem",
+    Path("..") / "C910_RTL_FACTORY" / "gen_rtl" / "filelists" / "C910_asic_rtl.fl",
+]
 
 
-def get_task_sim_root(task_name):
-    return COVERAGEDB_ROOT / "tasks" / task_name / "sim"
+def resolve_workspace_path(path_arg, arg_name, *, must_exist=False):
+    if not path_arg:
+        raise FileNotFoundError(f"{arg_name} is required")
+
+    candidate = Path(path_arg).expanduser()
+    if not candidate.is_absolute():
+        raise FileNotFoundError(f"{arg_name} must be an absolute path: {path_arg}")
+
+    candidate = candidate.resolve()
+    if not path_is_relative_to(candidate, WORKSPACE_ROOT):
+        raise FileNotFoundError(
+            f"{arg_name} must be under workspace: {candidate}; workspace={WORKSPACE_ROOT}"
+        )
+
+    if must_exist and not candidate.exists():
+        raise FileNotFoundError(f"Path does not exist: {candidate}")
+    return candidate
 
 
-def ensure_task_sim_root(task_name):
-    sim_root = get_task_sim_root(task_name)
-    if sim_root.exists():
-        return sim_root
-
-    template_sim = TEMPLATE_ROOT / "sim"
-    if not template_sim.exists():
-        raise FileNotFoundError(f"Simulation template not found: {template_sim}")
-
-    sim_root.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(template_sim, sim_root)
-    return sim_root
+def resolve_script_path(script_path):
+    candidate = resolve_workspace_path(script_path, "--script-path", must_exist=True)
+    if not candidate.is_file():
+        raise FileNotFoundError(f"Script path is not a file: {candidate}")
+    if candidate.suffix != ".py":
+        raise FileNotFoundError(f"Script path must point to a .py file: {candidate}")
+    return candidate
 
 
-def get_isg_script_root(task_name):
-    return WORKSPACE_ROOT / "isgScripts" / task_name
+def ensure_smart_run_root():
+    required = [SMART_RUN_ROOT / rel for rel in REQUIRED_SMART_RUN_FILES]
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        raise FileNotFoundError(
+            "Simulation root is incomplete under workspace/openc910/smart_run. "
+            "Missing: " + ", ".join(missing)
+        )
+    return SMART_RUN_ROOT
 
 
-def detect_vdb_path(task_name):
-    sim_root = get_task_sim_root(task_name)
-    for candidate in [sim_root / "work_force" / "simv.vdb", sim_root / "simv.vdb"]:
-        if candidate.exists() and candidate.is_dir():
-            return candidate
-    if sim_root.exists():
-        for p in sim_root.rglob("*.vdb"):
-            if p.is_dir():
-                return p
-    return None
+def run_make(args, step):
+    env = os.environ.copy()
+    env.setdefault("CODE_BASE_PATH", str(CODE_BASE_PATH.resolve()))
+    proc = subprocess.run(
+        ["make", "-f", "makefileFRV", *args],
+        cwd=str(SMART_RUN_ROOT),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    if proc.returncode == 0:
+        return None
+
+    return {
+        "error": f"Make target '{step}' failed",
+        "step": step,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout[-1000:],
+        "stderr": proc.stderr[-1000:],
+        "smart_run_root": str(SMART_RUN_ROOT),
+        "work_force": str(WORK_FORCE_ROOT),
+        "vdb_path": str(VDB_PATH),
+        "cov_report_path": str(VDB_PATH),
+    }
 
 
-def find_script(script_name, task_name):
-    filename = script_name if script_name.endswith(".py") else f"{script_name}.py"
-    script_root = get_isg_script_root(task_name)
+def success_payload(script_path, test_name, iter_count):
+    return {
+        "status": "success",
+        "test_name": test_name,
+        "iter_count": iter_count,
+        "script_path": str(script_path),
+        "smart_run_root": str(SMART_RUN_ROOT),
+        "work_force": str(WORK_FORCE_ROOT),
+        "vdb_path": str(VDB_PATH),
+        "cov_report_path": str(VDB_PATH),
+        "note": "Use coverage list-tests/query with --vdb-path and this test_name.",
+    }
 
-    candidate = script_root / filename
-    if candidate.exists():
-        return candidate
 
-    for f in script_root.glob("*.py"):
-        if f.stem == Path(filename).stem:
-            return f
-
-    raise FileNotFoundError(f"Script not found: {filename}")
-
-
-def execute_simulation(script_name, iter_count, task_name):
+def execute_simulation(script_path, iter_count, sim_root=None):
     try:
-        isg_scripts_root = get_isg_script_root(task_name)
-        isg_scripts_root.mkdir(parents=True, exist_ok=True)
+        script_path = resolve_script_path(script_path)
+        ensure_smart_run_root()
 
-        sim_root = ensure_task_sim_root(task_name)
+        dest_script = SMART_RUN_ROOT / "AgenticTargetTest.py"
+        shutil.copy2(str(script_path), str(dest_script))
 
-        src_script = find_script(script_name, task_name)
-        dest_script = sim_root / "AgenticTargetTest.py"
-        dest_script.unlink(missing_ok=True)
-        shutil.copy2(str(src_script), str(dest_script))
+        error = run_make(["setup", "force_rv"], "setup force_rv")
+        if error:
+            return json.dumps(error, ensure_ascii=False, indent=2)
 
-        proc = subprocess.run(
-            ["make", "-f", "makefileFRV", "force_rv"],
-            cwd=str(sim_root),
-            capture_output=True,
-            text=True,
+        error = run_make(["compile"], "compile")
+        if error:
+            return json.dumps(error, ensure_ascii=False, indent=2)
+
+        test_name = f"{script_path.stem}_iter_{iter_count}"
+        error = run_make(
+            ["run", f"COVTEST={test_name}", f"ITER_NUM={iter_count}"],
+            f"run COVTEST={test_name} ITER_NUM={iter_count}",
         )
-        if proc.returncode != 0:
-            return json.dumps(
-                {
-                    "error": "Make target 'force_rv' failed",
-                    "suggestion": "Retry the simulation-run command; randomness may cause errors",
-                    "stderr": proc.stderr[-500:],
-                }
-            )
+        if error:
+            return json.dumps(error, ensure_ascii=False, indent=2)
 
-        test_name = script_name.split("/")[-1].split(".")[0]
-        proc = subprocess.run(
-            [
-                "make",
-                "-f",
-                "makefileFRV",
-                "run",
-                f"TASK_NAME={test_name}",
-                f"ITER_NUM={iter_count}",
-            ],
-            cwd=str(sim_root),
-            capture_output=True,
-            text=True,
-        )
-        if proc.returncode != 0:
-            return json.dumps(
-                {
-                    "error": f"Make 'run' failed with TASK_NAME={test_name}, ITER_NUM={iter_count}",
-                    "stderr": proc.stderr[-500:],
-                }
-            )
-
-        vdb_path = detect_vdb_path(task_name)
         return json.dumps(
-            {
-                "status": "success",
-                "test_name": test_name + "_iter_" + str(iter_count),
-                "iter_count": iter_count,
-                "cov_report_path": str(vdb_path)
-                if vdb_path
-                else str(sim_root / "work_force" / "simv.vdb"),
-                "note": "load coverage and query this test name to get coverage information",
-            }
+            success_payload(script_path, test_name, iter_count),
+            ensure_ascii=False,
+            indent=2,
         )
-    except Exception as e:
-        return json.dumps({"error": f"Simulation failed: {e}"})
+    except Exception as exc:
+        return json.dumps({"error": f"Simulation failed: {exc}"})
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--script-name", required=True)
+    parser.add_argument("--script-path", required=True)
     parser.add_argument("--iter-count", type=int, default=1)
-    parser.add_argument("--task-name", required=True)
+    parser.add_argument("--sim-root", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--task-name", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--script-name", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args()
-    print(execute_simulation(args.script_name, args.iter_count, args.task_name))
+    print(execute_simulation(args.script_path, args.iter_count, args.sim_root))
