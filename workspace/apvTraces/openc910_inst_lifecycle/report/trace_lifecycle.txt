@@ -1,0 +1,224 @@
+======================================================================
+Trace Lifecycle Report (Linear Paths)
+======================================================================
+
+Path #1 (Trace 0, Branch 0):
+  ● [IFU PCGEN/IBCTRL/IBDP dispatch inst0] row=30 fsdb_time=215450000
+     LOG: [IFU_IB0] if_pc=8 pcgen=8 vpc=2 ib_vpc=2 bypass=0x1 inst0=4060000100b37
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_pcgen.if_pc = 0000000008
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_ifctrl_pc = 0000000008
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_chgflw = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_icache_if_seq_data_req = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_icache_if_index = 0010
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_btb_index = 002
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_btb_chgflw = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_ibctrl.ib_vpc = 0000000002
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_ibctrl.ibdp_ibctrl_vpc = 0000000002
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_ibctrl.ipctrl_ibctrl_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_ibctrl.ibctrl_ibdp_bypass_inst_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_ibctrl.ifu_idu_ib_pipedown_gateclk = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_ibdp.ifu_idu_ib_inst0_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.x_ct_ifu_ibdp.ifu_idu_ib_inst0_data = 0000004060000100B37
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.pcgen_ifctrl_pc = 0000000008
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifdp_ipdp_vpc = 0000000002
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ibdp_ibctrl_vpc = 0000000002
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifctrl_ifdp_pipedown = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ibctrl_ibuf_create_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ibctrl_ibuf_data_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifu_idu_ib_inst0_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifu_idu_ib_inst0_data = 0000004060000100B37
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifu_idu_ib_inst1_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifu_idu_ib_inst1_data = 00000080600036E8B33
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifu_idu_ib_inst2_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_ifu_top.ifu_idu_ib_inst2_data = 000000C0600000012B7
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.idu_ifu_id_stall = 0
+  → [IDU ID_CTRL/ID_DP decode pipe0] row=31 fsdb_time=215550000
+     LOG: [ID_DECODE0] id_vld=0x1 pipe=0x1 normal=0x1 stall=0x0 inst=4060000100b37
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.ifu_idu_ib_inst0_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.ifu_idu_ib_inst0_data = 0000000000000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.idu_ifu_id_stall = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_id_ctrl.id_inst0_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_id_ctrl.ctrl_id_pipedown_inst0_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_id_ctrl.ctrl_id_inst0_normal = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_id_dp.id_inst0_data = 0000004060000100B37
+  → [IDU IR_CTRL/IR_DP rename pipe0] row=32 fsdb_time=215650000
+     LOG: [IR_RENAME0] ir_vld=0x1 pipe=0x1 inst=400000300400560001160004016810000100b37 preg=0x1 freg=0x0 vreg=0x0 ereg=0x0
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_ir_ctrl.ir_inst0_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_ir_ctrl.ctrl_ir_pipedown_inst0_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_ir_dp.ir_inst0_data = 000000400000300400560001160004016810000100B37
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_ir_ctrl.idu_rtu_ir_preg0_alloc_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.idu_rtu_ir_preg0_alloc_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.idu_rtu_ir_freg0_alloc_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.idu_rtu_ir_vreg0_alloc_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.idu_rtu_ir_ereg0_alloc_vld = 0
+  → [IDU to RTU ROB alloc0] row=33 fsdb_time=215750000
+     LOG: [ROB_ALLOC0] iid=0 data=7806d
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.idu_rtu_rob_create0_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.idu_rtu_rob_create0_data = 000007806D
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.rtu_idu_rob_inst0_iid = 00
+  → [IDU IS_CTRL/AIQ0 create and bypass issue] row=33 fsdb_time=215750000
+     LOG: [IS_AIQ0_BYPASS] c0=0x1:0 c1=0x1:0 entry=1/0x1 issue=0x1 bypass=0x1 src0_preg=0 data=40000000000000000000002000000800016c0700c01d40000100b37
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq0_create0_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq0_create1_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create1_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq1_create0_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_dp.is_aiq1_create0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq1_create1_en = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_dp.is_aiq1_create1_iid = 01
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.ctrl_aiq0_create0_dp_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_entry_create0_in = 01
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.dp_aiq0_create0_data = 0040000000000000000000002000000800016C0700C01D40000100B37
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_dp_issue_entry = 01
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_dp_issue_read_data = 004000000000000000000000200000080001680600801D40000100B37
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_bypass_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_xx_issue_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_dp_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_write_en = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_preg = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_rdy = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_wb = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_lsu_match = 0
+  → [IDU RF_CTRL/RF_DP pipe0 launch] row=34 fsdb_time=215850000
+     LOG: [RF_PIPE0] iid=0 func=8 dst=1d src0=0 src1=100 pop=0x1 lch_fail=0x0
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.rf_pipe0_inst_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_lch_fail = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_other_lch_fail = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_pipedown_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_aiq0_rf_pop_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_aiq0_rf_lch_fail_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.idu_iu_rf_pipe0_sel = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_ctrl.idu_iu_rf_pipe0_gateclk_sel = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.rf_pipe0_data = 004000000000000000000000200000080001680600801D40000100B37
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.dp_ctrl_rf_pipe0_src_no_rdy = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_func = 08
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_preg = 1D
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_src0 = 0000000000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_src1 = 0000000000000100
+  → [IDU RF pipe0 decoder] row=34 fsdb_time=215850000
+     LOG: [RF_DECD0] iid=0 eu=1 func=8 sel=2000 opcode=100b37
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_func = 08
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_preg = 1D
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_eu_sel = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_expt_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_func = 08
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_sel = 002000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_opcode = 00100B37
+  → [IU pipe0 receives RF handoff] row=34 fsdb_time=215850000
+     LOG: [IU_RECV0] iid=0 opcode=100b37 func=8 dst=1d src0=0 src1=100
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_sel = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_gateclk_sel = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_opcode = 00100B37
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_func = 08
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_dst_preg = 1D
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_dst_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_src0 = 0000000000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.idu_iu_rf_pipe0_src1 = 0000000000000100
+  → [IU ALU0/RBUS/CBUS pipe0 complete] row=35 fsdb_time=215950000
+     LOG: [IU_CMPLT0] iid=0 alu_preg=1d data=100000 fwd=0x1 rbus=0x1:0 cbus_abn=0x0 expt=0x0 wb=0x0:20
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_gateclk_sel = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_dst_preg = 21
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_dst_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_func = 08
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_rslt_sel = 002000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_src0 = 0000000000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_src1 = 0000000000000001
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_data_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_data = 0000000000100000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_preg = 1D
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_fwd_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_fwd_data = 0000000000100000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_data_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_preg = 1D
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_fwd_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_fwd_data = 0000000000100000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_rslt_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_wb_preg_dup5 = 20
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_wb_vld = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_wb_data = 0000000000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.div_rbus_pipe0_data_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.cp0_iu_ex3_rslt_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.vfpu_iu_ex2_pipe6_mfvr_data_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_rbus.special_rbus_ex1_data_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_cmplt = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_abnormal = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_expt_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_cbus.idu_iu_rf_pipe0_sel = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.x_ct_iu_cbus.idu_iu_rf_pipe0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.iu_rtu_pipe0_cmplt = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.iu_rtu_pipe0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.iu_rtu_pipe0_abnormal = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.iu_rtu_pipe0_expt_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.iu_rtu_pipe0_expt_vec = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.iu_rtu_ex2_pipe0_wb_preg_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.iu_idu_ex2_pipe0_wb_preg = 20
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.iu_idu_ex2_pipe0_wb_preg_data = 0000000000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.iu_idu_ex1_pipe0_fwd_preg_vld = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.iu_idu_ex1_pipe0_fwd_preg = 1D
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_iu_top.iu_idu_ex1_pipe0_fwd_preg_data = 0000000000100000
+  → [RTU TOP/ROB commit] row=36 fsdb_time=216050000
+     LOG: [RTU_COMMIT] c0=0x1:0 c1=0x0:1 c2=0x0:2 rob_c0=0x1:0 retire0=0x0 retire_pc0=4
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit1 = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit1_iid = 01
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit2 = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit2_iid = 02
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_pad_retire0_pc = 0000000004
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_pad_retire1_pc = 0000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_pad_retire2_pc = 0000000000
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rob_retire_inst0_cur_pc = 0000000002
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rob_retire_inst0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rob_retire_inst0_vld = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_retire0 = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_pad_retire0 = 0
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rtu_yy_xx_commit0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rtu_yy_xx_commit0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rob_read0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rtu_pad_retire0_pc = 0000000004
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_pad_retire0_pc = 0000000004
+  ◆ [RTU ROB_RT retire and core pad boundary] row=37 fsdb_time=216150000
+     LOG: [RTU_RETIRE] commit_iid=0 retire0=0x1 core_pc=4 pad_pc=4
+     Captured signals:
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.rtu_pad_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.rtu_pad_retire0_pc = 0000000004
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_pad_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_pad_retire0_pc = 0000000004
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.rtu_yy_xx_commit0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rtu_yy_xx_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rob_read0_iid = 01
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rtu_pad_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.rtu_pad_retire0_pc = 0000000004
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0_iid = 00
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_pad_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core.x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_pad_retire0_pc = 0000000004
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.core0_pad_retire0 = 1
+       tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.core0_pad_retire0_pc = 0000000004
+
+======================================================================
+Duplicate Match Summary (Within-Task Only)
+======================================================================
+
+No duplicate matches detected within any task.

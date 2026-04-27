@@ -8,6 +8,7 @@ opencode.json
 
 # 日志
 logs/
+fsdbdebugLog/
 *.log
 
 # 覆盖率任务数据（可选提交）
@@ -32,6 +33,8 @@ openc910
 *.swp
 .DS_Store
 Thumbs.db
+workspace/apvTraces/**/report/deps.png
+workspace/apvTraces/**/report/fsdb_dump.txt
 
 # Python
 __pycache__/

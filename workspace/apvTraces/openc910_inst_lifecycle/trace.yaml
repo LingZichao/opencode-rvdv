@@ -1,0 +1,348 @@
+fsdbFile: /home/c910/lingzichao/openc910/smart_run/work_force/novas.fsdb
+globalClock: tb.clk
+scope: tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core
+
+output:
+  directory: workspace/apvTraces/openc910_inst_lifecycle/report
+  verbose: true
+  timeout: 100000000
+  dependency_graph: deps.png
+
+globalFlush:
+  condition:
+    - "rtu_yy_xx_flush"
+    - "|| x_ct_ifu_top.rtu_ifu_flush"
+    - "|| x_ct_idu_top.rtu_idu_flush_fe"
+    - "|| x_ct_idu_top.rtu_idu_flush_is"
+
+tasks:
+  - id: ifu_ib_dispatch_inst0
+    name: IFU PCGEN/IBCTRL/IBDP dispatch inst0
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_ifu_top.ifu_idu_ib_inst0_vld"
+      - "&& not x_ct_idu_top.idu_ifu_id_stall"
+      - "&& x_ct_ifu_top.ifdp_ipdp_vpc"
+    capture:
+      - x_ct_ifu_top.x_ct_ifu_pcgen.if_pc
+      - x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_ifctrl_pc
+      - x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_chgflw
+      - x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_icache_if_seq_data_req
+      - x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_icache_if_index
+      - x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_btb_index
+      - x_ct_ifu_top.x_ct_ifu_pcgen.pcgen_btb_chgflw
+      - x_ct_ifu_top.x_ct_ifu_ibctrl.ib_vpc
+      - x_ct_ifu_top.x_ct_ifu_ibctrl.ibdp_ibctrl_vpc
+      - x_ct_ifu_top.x_ct_ifu_ibctrl.ipctrl_ibctrl_vld
+      - x_ct_ifu_top.x_ct_ifu_ibctrl.ibctrl_ibdp_bypass_inst_vld
+      - x_ct_ifu_top.x_ct_ifu_ibctrl.ifu_idu_ib_pipedown_gateclk
+      - x_ct_ifu_top.x_ct_ifu_ibdp.ifu_idu_ib_inst0_vld
+      - x_ct_ifu_top.x_ct_ifu_ibdp.ifu_idu_ib_inst0_data
+      - x_ct_ifu_top.pcgen_ifctrl_pc
+      - x_ct_ifu_top.ifdp_ipdp_vpc
+      - x_ct_ifu_top.ibdp_ibctrl_vpc
+      - x_ct_ifu_top.ifctrl_ifdp_pipedown
+      - x_ct_ifu_top.ibctrl_ibuf_create_vld
+      - x_ct_ifu_top.ibctrl_ibuf_data_vld
+      - x_ct_ifu_top.ifu_idu_ib_inst0_vld
+      - x_ct_ifu_top.ifu_idu_ib_inst0_data
+      - x_ct_ifu_top.ifu_idu_ib_inst1_vld
+      - x_ct_ifu_top.ifu_idu_ib_inst1_data
+      - x_ct_ifu_top.ifu_idu_ib_inst2_vld
+      - x_ct_ifu_top.ifu_idu_ib_inst2_data
+      - x_ct_idu_top.idu_ifu_id_stall
+    logging:
+      - "[IFU_IB0] if_pc={if_pc:x} pcgen={pcgen_ifctrl_pc:x} vpc={ifdp_ipdp_vpc:x} ib_vpc={ibdp_ibctrl_vpc:x} bypass={ibctrl_ibdp_bypass_inst_vld} inst0={ifu_idu_ib_inst0_data:x}"
+
+  - id: idu_id_decode0
+    name: IDU ID_CTRL/ID_DP decode pipe0
+    dependsOn: ifu_ib_dispatch_inst0
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_idu_top.x_ct_idu_id_dp.id_inst0_data == $dep.ifu_ib_dispatch_inst0.ifu_idu_ib_inst0_data"
+    capture:
+      - x_ct_idu_top.ifu_idu_ib_inst0_vld
+      - x_ct_idu_top.ifu_idu_ib_inst0_data
+      - x_ct_idu_top.idu_ifu_id_stall
+      - x_ct_idu_top.x_ct_idu_id_ctrl.id_inst0_vld
+      - x_ct_idu_top.x_ct_idu_id_ctrl.ctrl_id_pipedown_inst0_vld
+      - x_ct_idu_top.x_ct_idu_id_ctrl.ctrl_id_inst0_normal
+      - x_ct_idu_top.x_ct_idu_id_dp.id_inst0_data
+    logging:
+      - "[ID_DECODE0] id_vld={id_inst0_vld} pipe={ctrl_id_pipedown_inst0_vld} normal={ctrl_id_inst0_normal} stall={idu_ifu_id_stall} inst={id_inst0_data:x}"
+
+  - id: idu_ir_rename0
+    name: IDU IR_CTRL/IR_DP rename pipe0
+    dependsOn: idu_id_decode0
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_idu_top.x_ct_idu_ir_ctrl.ir_inst0_vld"
+      - "&& x_ct_idu_top.x_ct_idu_ir_ctrl.ctrl_ir_pipedown_inst0_vld"
+      - "&& x_ct_idu_top.x_ct_idu_ir_dp.ir_inst0_data[31:0] == $dep.idu_id_decode0.id_inst0_data[31:0]"
+    capture:
+      - x_ct_idu_top.x_ct_idu_ir_ctrl.ir_inst0_vld
+      - x_ct_idu_top.x_ct_idu_ir_ctrl.ctrl_ir_pipedown_inst0_vld
+      - x_ct_idu_top.x_ct_idu_ir_dp.ir_inst0_data
+      - x_ct_idu_top.x_ct_idu_ir_ctrl.idu_rtu_ir_preg0_alloc_vld
+      - x_ct_idu_top.idu_rtu_ir_preg0_alloc_vld
+      - x_ct_idu_top.idu_rtu_ir_freg0_alloc_vld
+      - x_ct_idu_top.idu_rtu_ir_vreg0_alloc_vld
+      - x_ct_idu_top.idu_rtu_ir_ereg0_alloc_vld
+    logging:
+      - "[IR_RENAME0] ir_vld={ir_inst0_vld} pipe={ctrl_ir_pipedown_inst0_vld} inst={ir_inst0_data:x} preg={idu_rtu_ir_preg0_alloc_vld} freg={idu_rtu_ir_freg0_alloc_vld} vreg={idu_rtu_ir_vreg0_alloc_vld} ereg={idu_rtu_ir_ereg0_alloc_vld}"
+
+  - id: idu_rob_alloc0
+    name: IDU to RTU ROB alloc0
+    dependsOn: idu_ir_rename0
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "idu_rtu_rob_create0_en"
+    capture:
+      - idu_rtu_rob_create0_en
+      - idu_rtu_rob_create0_data
+      - rtu_idu_rob_inst0_iid
+    logging:
+      - "[ROB_ALLOC0] iid={rtu_idu_rob_inst0_iid:x} data={idu_rtu_rob_create0_data:x}"
+
+  - id: idu_is_aiq0_create
+    name: IDU IS_CTRL/AIQ0 create and bypass issue
+    dependsOn: idu_rob_alloc0
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_idu_top.x_ct_idu_is_aiq0.ctrl_aiq0_create0_dp_en"
+      - "&& x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_xx_issue_en"
+      - "&& x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_bypass_en"
+      - "&& x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_dp_en"
+      - "&& x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_en == x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_entry_create0_in"
+      - "&& ((x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq0_create0_en && x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create0_iid == $dep.idu_rob_alloc0.rtu_idu_rob_inst0_iid)"
+      - "|| (x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq0_create1_en && x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create1_iid == $dep.idu_rob_alloc0.rtu_idu_rob_inst0_iid)"
+      - "|| (x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq1_create0_en && x_ct_idu_top.x_ct_idu_is_dp.is_aiq1_create0_iid == $dep.idu_rob_alloc0.rtu_idu_rob_inst0_iid)"
+      - "|| (x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq1_create1_en && x_ct_idu_top.x_ct_idu_is_dp.is_aiq1_create1_iid == $dep.idu_rob_alloc0.rtu_idu_rob_inst0_iid))"
+    capture:
+      - x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq0_create0_en
+      - x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create0_iid
+      - x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq0_create1_en
+      - x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create1_iid
+      - x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq1_create0_en
+      - x_ct_idu_top.x_ct_idu_is_dp.is_aiq1_create0_iid
+      - x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq1_create1_en
+      - x_ct_idu_top.x_ct_idu_is_dp.is_aiq1_create1_iid
+      - x_ct_idu_top.x_ct_idu_is_aiq0.ctrl_aiq0_create0_dp_en
+      - x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_entry_create0_in
+      - x_ct_idu_top.x_ct_idu_is_aiq0.dp_aiq0_create0_data
+      - x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_dp_issue_entry
+      - x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_dp_issue_read_data
+      - x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_bypass_en
+      - x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_xx_issue_en
+      - x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_en
+      - x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_dp_en
+      - x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_write_en
+      - x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_preg
+      - x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_rdy
+      - x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_wb
+      - x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_ct_idu_is_aiq0_src0_entry.x_create_lsu_match
+    logging:
+      - "[IS_AIQ0_BYPASS] c0={is_dis_aiq0_create0_en}:{is_aiq0_create0_iid:x} c1={is_dis_aiq0_create1_en}:{is_aiq0_create1_iid:x} entry={x_create_en:x}/{x_create_dp_en} issue={aiq0_xx_issue_en} bypass={aiq0_bypass_en} src0_preg={x_create_preg:x} data={dp_aiq0_create0_data:x}"
+
+  - id: idu_rf_to_iu_pipe0
+    name: IDU RF_CTRL/RF_DP pipe0 launch
+    dependsOn: idu_is_aiq0_create
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_idu_top.x_ct_idu_rf_ctrl.rf_pipe0_inst_vld"
+      - "&& x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_pipedown_vld"
+      - "&& x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_vld"
+      - "&& (x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid == $dep.idu_is_aiq0_create.is_aiq0_create0_iid"
+      - "|| x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid == $dep.idu_is_aiq0_create.is_aiq0_create1_iid"
+      - "|| x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid == $dep.idu_is_aiq0_create.is_aiq1_create0_iid"
+      - "|| x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid == $dep.idu_is_aiq0_create.is_aiq1_create1_iid)"
+    capture:
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.rf_pipe0_inst_vld
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_lch_fail
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_other_lch_fail
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_pipedown_vld
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_aiq0_rf_pop_vld
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_aiq0_rf_lch_fail_vld
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.idu_iu_rf_pipe0_sel
+      - x_ct_idu_top.x_ct_idu_rf_ctrl.idu_iu_rf_pipe0_gateclk_sel
+      - x_ct_idu_top.x_ct_idu_rf_dp.rf_pipe0_data
+      - x_ct_idu_top.x_ct_idu_rf_dp.dp_ctrl_rf_pipe0_src_no_rdy
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_func
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_preg
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_vld
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_src0
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_src1
+    logging:
+      - "[RF_PIPE0] iid={idu_iu_rf_pipe0_iid:x} func={idu_iu_rf_pipe0_func:x} dst={idu_iu_rf_pipe0_dst_preg:x} src0={idu_iu_rf_pipe0_src0:x} src1={idu_iu_rf_pipe0_src1:x} pop={ctrl_aiq0_rf_pop_vld} lch_fail={ctrl_rf_pipe0_lch_fail}"
+
+  - id: idu_rf_pipe0_decode
+    name: IDU RF pipe0 decoder
+    dependsOn: idu_rf_to_iu_pipe0
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid == $dep.idu_rf_to_iu_pipe0.idu_iu_rf_pipe0_iid"
+      - "&& x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_func == $dep.idu_rf_to_iu_pipe0.idu_iu_rf_pipe0_func"
+      - "&& not x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_expt_vld"
+    capture:
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_func
+      - x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_preg
+      - x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_eu_sel
+      - x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_expt_vld
+      - x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_func
+      - x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_sel
+      - x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_opcode
+    logging:
+      - "[RF_DECD0] iid={idu_iu_rf_pipe0_iid:x} eu={pipe0_decd_eu_sel:x} func={pipe0_decd_func:x} sel={pipe0_decd_sel:x} opcode={pipe0_decd_opcode:x}"
+
+  - id: iu_pipe0_receive
+    name: IU pipe0 receives RF handoff
+    dependsOn: idu_rf_pipe0_decode
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_iu_top.idu_iu_rf_pipe0_sel"
+      - "&& x_ct_iu_top.idu_iu_rf_pipe0_iid == $dep.idu_rf_pipe0_decode.idu_iu_rf_pipe0_iid"
+      - "&& x_ct_iu_top.idu_iu_rf_pipe0_func == $dep.idu_rf_pipe0_decode.idu_iu_rf_pipe0_func"
+      - "&& x_ct_iu_top.idu_iu_rf_pipe0_dst_preg == $dep.idu_rf_pipe0_decode.idu_iu_rf_pipe0_dst_preg"
+    capture:
+      - x_ct_iu_top.idu_iu_rf_pipe0_sel
+      - x_ct_iu_top.idu_iu_rf_pipe0_gateclk_sel
+      - x_ct_iu_top.idu_iu_rf_pipe0_iid
+      - x_ct_iu_top.idu_iu_rf_pipe0_opcode
+      - x_ct_iu_top.idu_iu_rf_pipe0_func
+      - x_ct_iu_top.idu_iu_rf_pipe0_dst_preg
+      - x_ct_iu_top.idu_iu_rf_pipe0_dst_vld
+      - x_ct_iu_top.idu_iu_rf_pipe0_src0
+      - x_ct_iu_top.idu_iu_rf_pipe0_src1
+    logging:
+      - "[IU_RECV0] iid={idu_iu_rf_pipe0_iid:x} opcode={idu_iu_rf_pipe0_opcode:x} func={idu_iu_rf_pipe0_func:x} dst={idu_iu_rf_pipe0_dst_preg:x} src0={idu_iu_rf_pipe0_src0:x} src1={idu_iu_rf_pipe0_src1:x}"
+
+  - id: iu_pipe0_complete
+    name: IU ALU0/RBUS/CBUS pipe0 complete
+    dependsOn: iu_pipe0_receive
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_data_vld"
+      - "&& x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_preg == $dep.iu_pipe0_receive.idu_iu_rf_pipe0_dst_preg"
+      - "&& x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_cmplt"
+      - "&& x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_iid == $dep.iu_pipe0_receive.idu_iu_rf_pipe0_iid"
+    capture:
+      - x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_gateclk_sel
+      - x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_dst_preg
+      - x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_dst_vld
+      - x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_func
+      - x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_rslt_sel
+      - x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_src0
+      - x_ct_iu_top.x_ct_iu_alu0.idu_iu_rf_pipex_src1
+      - x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_data_vld
+      - x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_data
+      - x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_preg
+      - x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_fwd_vld
+      - x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_fwd_data
+      - x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_data_vld
+      - x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_preg
+      - x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_fwd_vld
+      - x_ct_iu_top.x_ct_iu_rbus.alu_rbus_ex1_pipe0_fwd_data
+      - x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_rslt_vld
+      - x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_wb_preg_dup5
+      - x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_wb_vld
+      - x_ct_iu_top.x_ct_iu_rbus.rbus_pipe0_wb_data
+      - x_ct_iu_top.x_ct_iu_rbus.div_rbus_pipe0_data_vld
+      - x_ct_iu_top.x_ct_iu_rbus.cp0_iu_ex3_rslt_vld
+      - x_ct_iu_top.x_ct_iu_rbus.vfpu_iu_ex2_pipe6_mfvr_data_vld
+      - x_ct_iu_top.x_ct_iu_rbus.special_rbus_ex1_data_vld
+      - x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_cmplt
+      - x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_iid
+      - x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_abnormal
+      - x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_expt_vld
+      - x_ct_iu_top.x_ct_iu_cbus.idu_iu_rf_pipe0_sel
+      - x_ct_iu_top.x_ct_iu_cbus.idu_iu_rf_pipe0_iid
+      - iu_rtu_pipe0_cmplt
+      - iu_rtu_pipe0_iid
+      - iu_rtu_pipe0_abnormal
+      - iu_rtu_pipe0_expt_vld
+      - iu_rtu_pipe0_expt_vec
+      - x_ct_iu_top.iu_rtu_ex2_pipe0_wb_preg_vld
+      - x_ct_iu_top.iu_idu_ex2_pipe0_wb_preg
+      - x_ct_iu_top.iu_idu_ex2_pipe0_wb_preg_data
+      - x_ct_iu_top.iu_idu_ex1_pipe0_fwd_preg_vld
+      - x_ct_iu_top.iu_idu_ex1_pipe0_fwd_preg
+      - x_ct_iu_top.iu_idu_ex1_pipe0_fwd_preg_data
+    logging:
+      - "[IU_CMPLT0] iid={iu_rtu_pipe0_iid:x} alu_preg={alu_rbus_ex1_pipex_preg:x} data={alu_rbus_ex1_pipex_data:x} fwd={alu_rbus_ex1_pipex_fwd_vld} rbus={rbus_pipe0_rslt_vld}:{rbus_pipe0_wb_vld:x} cbus_abn={iu_rtu_pipe0_abnormal} expt={iu_rtu_pipe0_expt_vld} wb={iu_rtu_ex2_pipe0_wb_preg_vld}:{iu_idu_ex2_pipe0_wb_preg:x}"
+
+  - id: rtu_commit
+    name: RTU TOP/ROB commit
+    dependsOn: iu_pipe0_complete
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "(x_ct_rtu_top.rtu_yy_xx_commit0 && x_ct_rtu_top.rtu_yy_xx_commit0_iid == $dep.iu_pipe0_complete.iu_rtu_pipe0_iid)"
+      - "|| (x_ct_rtu_top.rtu_yy_xx_commit1 && x_ct_rtu_top.rtu_yy_xx_commit1_iid == $dep.iu_pipe0_complete.iu_rtu_pipe0_iid)"
+      - "|| (x_ct_rtu_top.rtu_yy_xx_commit2 && x_ct_rtu_top.rtu_yy_xx_commit2_iid == $dep.iu_pipe0_complete.iu_rtu_pipe0_iid)"
+    capture:
+      - x_ct_rtu_top.rtu_yy_xx_commit0
+      - x_ct_rtu_top.rtu_yy_xx_commit0_iid
+      - x_ct_rtu_top.rtu_yy_xx_commit1
+      - x_ct_rtu_top.rtu_yy_xx_commit1_iid
+      - x_ct_rtu_top.rtu_yy_xx_commit2
+      - x_ct_rtu_top.rtu_yy_xx_commit2_iid
+      - x_ct_rtu_top.rtu_pad_retire0_pc
+      - x_ct_rtu_top.rtu_pad_retire1_pc
+      - x_ct_rtu_top.rtu_pad_retire2_pc
+      - x_ct_rtu_top.rob_retire_inst0_cur_pc
+      - x_ct_rtu_top.rob_retire_inst0_iid
+      - x_ct_rtu_top.rob_retire_inst0_vld
+      - x_ct_rtu_top.rtu_yy_xx_retire0
+      - x_ct_rtu_top.rtu_pad_retire0
+      - x_ct_rtu_top.x_ct_rtu_rob.rtu_yy_xx_commit0
+      - x_ct_rtu_top.x_ct_rtu_rob.rtu_yy_xx_commit0_iid
+      - x_ct_rtu_top.x_ct_rtu_rob.rob_read0_iid
+      - x_ct_rtu_top.x_ct_rtu_rob.rtu_pad_retire0_pc
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0_iid
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_pad_retire0_pc
+    logging:
+      - "[RTU_COMMIT] c0={rtu_yy_xx_commit0}:{rtu_yy_xx_commit0_iid:x} c1={rtu_yy_xx_commit1}:{rtu_yy_xx_commit1_iid:x} c2={rtu_yy_xx_commit2}:{rtu_yy_xx_commit2_iid:x} rob_c0={rtu_yy_xx_commit0}:{rtu_yy_xx_commit0_iid:x} retire0={rtu_yy_xx_retire0} retire_pc0={rtu_pad_retire0_pc:x}"
+
+  - id: rtu_retire_boundary
+    name: RTU ROB_RT retire and core pad boundary
+    dependsOn: rtu_commit
+    matchMode: first
+    maxMatch: 1
+    condition:
+      - "x_ct_rtu_top.rtu_pad_retire0"
+      - "&& x_ct_rtu_top.rtu_yy_xx_retire0"
+      - "&& x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_retire0"
+      - "&& x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0_iid == $dep.rtu_commit.rtu_yy_xx_commit0_iid"
+    capture:
+      - rtu_pad_retire0
+      - rtu_pad_retire0_pc
+      - x_ct_rtu_top.rtu_pad_retire0
+      - x_ct_rtu_top.rtu_pad_retire0_pc
+      - x_ct_rtu_top.rtu_yy_xx_retire0
+      - x_ct_rtu_top.rtu_yy_xx_commit0
+      - x_ct_rtu_top.rtu_yy_xx_commit0_iid
+      - x_ct_rtu_top.x_ct_rtu_rob.rtu_yy_xx_retire0
+      - x_ct_rtu_top.x_ct_rtu_rob.rob_read0_iid
+      - x_ct_rtu_top.x_ct_rtu_rob.rtu_pad_retire0
+      - x_ct_rtu_top.x_ct_rtu_rob.rtu_pad_retire0_pc
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_commit0_iid
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_yy_xx_retire0
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_pad_retire0
+      - x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.rtu_pad_retire0_pc
+      - tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.core0_pad_retire0
+      - tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.core0_pad_retire0_pc
+    logging:
+      - "[RTU_RETIRE] commit_iid={rtu_yy_xx_commit0_iid:x} retire0={rtu_yy_xx_retire0} core_pc={rtu_pad_retire0_pc:x} pad_pc={core0_pad_retire0_pc:x}"
