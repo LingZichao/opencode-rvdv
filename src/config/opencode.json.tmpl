@@ -68,11 +68,6 @@
           "*": "deny",
           "coverage": "allow"
         },
-        "bash": {
-          "*": "deny",
-          "python3 scripts/ucapi_client.py *": "allow",
-          "python3 scripts/simulation_runner.py *": "allow"
-        },
         "edit": "deny"
       }
     },
@@ -98,11 +93,6 @@
           "isg-compile": "allow",
           "gem5-prescreen": "allow"
         },
-        "bash": {
-          "*": "deny",
-          "python3 scripts/isg_compiler.py *": "allow",
-          "python3 scripts/gem5_prescreener.py run *": "allow"
-        },
         "edit": "allow"
       }
     },
@@ -126,10 +116,6 @@
         "skill": {
           "*": "deny",
           "fsdb-sampling": "allow"
-        },
-        "bash": {
-          "*": "deny",
-          "python3 .opencode/skills/fsdb-sampling/AgenticPipeViewer/view.py *": "allow"
         },
         "edit": "allow"
       }
@@ -174,9 +160,7 @@
     "skill": {
       "*": "ask"
     },
-    "bash": {
-      "*": "ask"
-    },
+    "bash": "allow",
     "edit": "ask"
   },
 
