@@ -1,0 +1,96 @@
+schema_version: 1
+case_id: case_002_branch_control_flow_dual_path_jump
+cluster_id: cluster_02_branch_control_flow
+cluster_name: branch/control-flow
+status: manual_seed
+task_name: manual-case-002-branch-control-flow
+primary_example_unit: ex_branch_pc_relative_conditional_force
+support_example_units:
+  - ex_branch_pc_relative_unconditional_force
+  - ex_branch_register_force
+required_api_units:
+  - isa_2_5_1_unconditional_jumps
+  - isa_2_5_2_conditional_branches
+  - isa_2_5_control_transfer_instructions
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: medium
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The generator-facing prompt must only describe branch behavior and
+    completion conditions. Example/API references stay in the manifest for
+    evaluation.
+expected_source_mix:
+  example_min_hits: 2
+  api_min_hits: 2
+  nav_expected: true
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_branch_pc_relative_conditional_force
+    - nav_api_index
+    - isa_2_5_2_conditional_branches
+    - ex_branch_pc_relative_unconditional_force
+    - isa_2_5_1_unconditional_jumps
+    - ex_branch_register_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 1
+test_plan:
+  objective: >
+    Generate a RV64 single-thread script that exposes clear control-flow
+    separation between a fallthrough path, a taken branch path, and a
+    register-targeted jump path.
+  behavioral_requirements:
+    - >
+      The script should begin with a short warm-up block of ordinary integer
+      instructions before any control transfer.
+    - >
+      The script should include at least one conditional branch that can be
+      observed in both taken and not-taken form within the same sequence.
+    - >
+      The script should include at least one register-targeted control transfer
+      that jumps to a prepared destination.
+    - >
+      The control-transfer region should stay compact enough that target and
+      fallthrough paths are easy to distinguish.
+  completion_requirements:
+    - >
+      The script must end with a clean exit after exercising the control-flow
+      paths.
+    - >
+      The sequence must show at least two distinct control-flow outcomes.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_branch_pc_relative_conditional_force
+    api_sensitive_traps:
+      - >
+        The conditional path must make the taken and not-taken outcomes
+        distinguishable, so the generator cannot treat all branches as the same
+        shape.
+      - >
+        The register-based jump target must be prepared before the jump is
+        emitted, or the path will not be well-defined.
+      - >
+        The target path should remain local and aligned, rather than relying on
+        a distant or opaque jump destination.
+manual_review_focus:
+  - >
+    Does the generated script show a real split between fallthrough and taken
+    paths?
+  - >
+    Does the jump path have a prepared destination instead of an accidental
+    one?
+  - >
+    Does the retrieval trace stay within the branch/control-flow cluster?
+notes: >
+  This is the second bootstrap case for the manual-labeling phase. It is
+  intended to probe control-flow reasoning rather than maximize branch count.

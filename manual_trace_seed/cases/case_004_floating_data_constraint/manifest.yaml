@@ -1,0 +1,97 @@
+schema_version: 1
+case_id: case_004_floating_data_constraint_boxed_fp_mix
+cluster_id: cluster_02_floating_data_constraint
+cluster_name: floating-point/data-constraint
+status: manual_seed
+task_name: manual-case-004-floating-data-constraint
+primary_example_unit: ex_fsu_muldiv_data_constr_force
+support_example_units:
+  - ex_fsu_muldiv_nan_boxing_force
+  - ex_api_gendata_test_force
+  - ex_fsu_basic_force
+required_api_units:
+  - api_um_5_1_1_genInstruction
+  - api_um_5_12_14_genData
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: medium
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The generator-facing plan must describe the floating-point behavior only.
+    Knowledge references stay in this manifest and the unit catalog.
+expected_source_mix:
+  example_min_hits: 2
+  api_min_hits: 2
+  nav_expected: true
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_fsu_muldiv_data_constr_force
+    - nav_api_index
+    - api_um_5_1_1_genInstruction
+    - api_um_5_12_14_genData
+    - ex_fsu_muldiv_nan_boxing_force
+    - ex_api_gendata_test_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 1
+test_plan:
+  objective: >
+    Generate a floating-point instruction stream that uses constrained operand
+    data patterns across at least two precisions.
+  behavioral_requirements:
+    - >
+      The script should have a setup phase that prepares a small set of
+      operand values with explicit bounds or boxed layouts.
+    - >
+      The script should have a computation phase that reuses those prepared
+      values across multiple floating-point multiply/divide operations.
+    - >
+      At least one phase should emphasize narrow boxed inputs, while another
+      phase should use broader bounded inputs.
+    - >
+      The script should include at least two different floating-point
+      precisions, but keep the control flow linear and easy to follow.
+  completion_requirements:
+    - >
+      The script should avoid integer ALU, branch, memory, exception, and
+      multiprocessing side traffic.
+    - >
+      The script should end cleanly after the floating-point sequence finishes.
+    - >
+      At least one operation should stress boundary-like operand values rather
+      than only generic random values.
+retrieval_contract:
+  example_style_anchor:
+    - ex_fsu_muldiv_data_constr_force
+  api_sensitive_traps:
+    - >
+      The generator should need to understand how constrained floating-point
+      operands are encoded rather than falling back to plain unconstrained
+      values.
+    - >
+      The generator should distinguish between boxed / narrow payloads and
+      broader bounded data patterns when building the same script.
+    - >
+      The generator should use floating-point instruction generation directly
+      rather than shifting to unrelated integer or memory primitives.
+manual_review_focus:
+  - >
+    Did the agent stay focused on constrained floating-point operands instead
+    of drifting into unrelated instruction families?
+  - >
+    Did the generated script keep the setup phase distinct from the compute
+    phase?
+  - >
+    Is the floating-point precision mix purposeful rather than arbitrary?
+notes: >
+  This is the floating-point bootstrap case for the manual seed set. It is
+  meant to validate data-constraint handling and boxed payload behavior.

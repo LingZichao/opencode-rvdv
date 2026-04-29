@@ -1,0 +1,108 @@
+schema_version: 1
+case_id: case_010_vector_masked_memory_attribute_mix
+cluster_id: cluster_08_vector_memory_attribute
+cluster_name: vector-masked-memory/attribute-contrast
+status: manual_seed
+task_name: manual-case-010-vector-masked-memory
+primary_example_unit: ex_vector_vector_mask_load_store_force
+support_example_units:
+  - ex_vector_vector_indexed_load_store_force
+  - ex_vector_vector_strided_load_store_force
+  - ex_vector_vector_vsetvl_force
+  - ex_vector_vector_vsetvli_force
+  - ex_vector_vector_mask_operand_init_force
+  - ex_paging_paging_memory_attributes_basic_force
+required_api_units:
+  - api_um_5_1_1_genInstruction
+  - api_um_5_3_2_genVA
+  - api_um_5_3_3_genVAforPA
+  - guide_memory_operations_genVA
+  - guide_memory_operations_genVAforPA
+  - guide_memory_operations_LSTarget
+  - isa_vector_memory_semantics
+  - isa_2_5_control_transfer_instructions
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    Keep the generator prompt purely behavioral. Vector and memory-attribute
+    lookup constraints stay in this manifest.
+expected_source_mix:
+  example_min_hits: 6
+  api_min_hits: 7
+  nav_expected: true
+  cross_source_switch_min: 7
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_vector_vector_mask_load_store_force
+    - ex_vector_vector_indexed_load_store_force
+    - nav_api_index
+    - guide_memory_operations_LSTarget
+    - api_um_5_3_2_genVA
+    - ex_vector_vector_vsetvli_force
+    - ex_vector_vector_mask_operand_init_force
+    - ex_paging_paging_memory_attributes_basic_force
+    - api_um_5_3_3_genVAforPA
+    - ex_vector_vector_strided_load_store_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 3
+test_plan:
+  objective: >
+    Generate a high-complexity vector-memory script that couples mask control,
+    indexed addressing, and address-attribute contrast in one coherent flow.
+  behavioral_requirements:
+    - >
+      The script should perform vector memory operations under multiple vset
+      configurations and multiple mask patterns.
+    - >
+      The script should replay at least one indexed memory template with only
+      mask changes to isolate masking effects.
+    - >
+      The script should contrast a stable address window and a restricted
+      address window while preserving comparable vector access shape.
+    - >
+      If restricted-window access raises exception-like behavior, execution
+      should still proceed to a post-window marker block.
+  completion_requirements:
+    - >
+      The sequence must contain vector load/store behavior across masked,
+      indexed, and strided or unit-stride styles.
+    - >
+      The script must terminate cleanly with x10/a0 set to zero before
+      M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_vector_vector_mask_load_store_force
+    api_sensitive_traps:
+      - >
+        Correct design requires combining vector operand/mask setup knowledge
+        with memory target and address-attribute controls.
+      - >
+        A valid contrast requires keeping access template stable while changing
+        one factor at a time (mask or address attribute).
+      - >
+        High-quality trace segmentation needs explicit stage markers across
+        vector-configuration and memory-attribute transitions.
+manual_review_focus:
+  - >
+    Did retrieval include both vector-memory examples and address-attribute
+    references rather than only one domain?
+  - >
+    Are mask-only replay pairs and attribute-contrast windows explicit?
+  - >
+    Does the trajectory indicate substantial search effort for niche vector
+    details?
+notes: >
+  This case intentionally targets sparse and detail-heavy knowledge paths so
+  that successful generation depends on non-trivial document/example search.

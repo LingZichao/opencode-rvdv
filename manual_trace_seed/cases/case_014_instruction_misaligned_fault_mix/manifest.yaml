@@ -1,0 +1,80 @@
+schema_version: 1
+case_id: case_014_instruction_misaligned_fault_mix
+cluster_id: cluster_12_ifetch_fault_mix
+cluster_name: ifetch-misaligned/access-fault-mix
+status: manual_seed
+task_name: manual-case-014-ifetch-fault-mix
+primary_example_unit: ex_exception_handlers_instruction_misaligned_exception_force
+support_example_units:
+  - ex_paging_access_fault_on_branch
+  - ex_paging_page_fault_on_branch_force
+  - ex_branch_pc_relative_conditional_force
+  - ex_loop_loop_reconverge_force
+  - ex_rv64_rv64_invalid_address_force
+required_api_units:
+  - api_um_5_3_2_genVA
+  - api_um_5_9_3_modify_paging_choices
+  - api_um_5_10_1_modify_variable
+  - api_um_5_6_4_query_exceptions
+  - isa_2_5_2_conditional_branches
+  - isa_2_5_1_unconditional_jumps
+  - isa_privileged_exception_model
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 7
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 9
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_exception_handlers_instruction_misaligned_exception_force
+    - ex_paging_access_fault_on_branch
+    - nav_api_index
+    - api_um_5_9_3_modify_paging_choices
+    - ex_paging_page_fault_on_branch_force
+    - api_um_5_6_4_query_exceptions
+    - ex_branch_pc_relative_conditional_force
+    - ex_loop_loop_reconverge_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a control-flow intensive script that contrasts instruction-
+    misaligned candidates and ifetch access-fault candidates with explicit
+    recovery anchors.
+  behavioral_requirements:
+    - >
+      Include both misaligned-target and access-restricted-target patterns.
+    - >
+      Keep at least one factor constant in each contrast pair to isolate cause.
+    - >
+      Include post-event recovery and reconvergence blocks.
+  completion_requirements:
+    - >
+      Include both candidate categories at least twice and terminate cleanly.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_exception_handlers_instruction_misaligned_exception_force
+    api_sensitive_traps:
+      - >
+        Requires cross-linking branch-target alignment behavior and paging
+        execute-access controls.
+manual_review_focus:
+  - Did retrieval cover both misaligned-exception and paging-branch-fault docs?
+  - Are contrast pairs factor-isolated and trace-friendly?
+notes: >
+  This case forces nuanced ifetch-fault reasoning and discourages shallow
+  branch-only templates.

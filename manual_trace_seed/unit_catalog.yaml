@@ -1,0 +1,267 @@
+schema_version: 1
+labeling_mode: manual_seed_v1
+cluster_index:
+  - cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    status: manual_seed
+    rationale: >
+      Bootstrap cluster for validating cluster-anchored case design without
+      running embedding or hierarchical clustering. The theme combines register
+      dependency shaping with register reservation and initialization semantics.
+    unit_ids:
+      - nav_example_agents
+      - nav_api_index
+      - ex_api_reg_dependence_force
+      - ex_api_reserve_register_test
+      - ex_api_initialize_register_test
+      - api_um_5_5_3_reserve_register
+      - api_um_5_5_5_unreserve_register
+      - api_um_5_5_6_is_register_reserved
+      - api_um_5_5_9_initialize_register
+      - api_um_5_9_5_modify_dependence_choices
+      - api_um_6_5_controlled_dependency
+      - api_um_7_1_register_dependency_controls
+units:
+  - unit_id: nav_example_agents
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: nav_unit
+    path: workspace/agentDoc/forceRV/example/AGENTS.md
+    title: Example Test Templates index
+    summary: >
+      Navigation index for FORCE-RISCV examples. It points directly to API
+      examples for register initialization and reservation.
+    keywords:
+      - examples
+      - APIs
+      - InitializeRegister
+      - ReserveRegister
+      - dependency
+    role_hint: nav
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: nav_api_index
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: nav_unit
+    path: workspace/agentDoc/forceRV/apiDoc/INDEX.md
+    title: API Documentation Index
+    summary: >
+      Section-level navigation page for the FORCE-RISCV manual. It exposes the
+      dependency-control and register-control sections needed by this case.
+    keywords:
+      - INDEX
+      - register control
+      - dependence choices
+      - Inter-Dependency Window
+    role_hint: nav
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: ex_api_reg_dependence_force
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: example
+    path: workspace/agentDoc/forceRV/example/APIs/reg_dependence_force.py
+    title: reg_dependence_force.py
+    summary: >
+      Example showing a scoped dependency configuration using a custom
+      ChoicesModifier, modifyDependenceChoices, and Inter-Dependency Window.
+    keywords:
+      - reg_dependence
+      - ChoicesModifier
+      - modifyDependenceChoices
+      - Inter-Dependency Window
+      - ALU instructions
+    role_hint: primary_example
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: ex_api_reserve_register_test
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: example
+    path: workspace/agentDoc/forceRV/example/APIs/ReserveRegisterTest_force.py
+    title: ReserveRegisterTest_force.py
+    summary: >
+      Example covering reserveRegister, unreserveRegister,
+      reserveRegisterByIndex, unreserveRegisterByIndex, and reservation-state
+      checks.
+    keywords:
+      - reserveRegister
+      - unreserveRegister
+      - isRegisterReserved
+      - reserveRegisterByIndex
+    role_hint: support_example
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: ex_api_initialize_register_test
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: example
+    path: workspace/agentDoc/forceRV/example/APIs/InitializeRegisterTest_force.py
+    title: InitializeRegisterTest_force.py
+    summary: >
+      Example for initializeRegister plus read-back verification over GPR and
+      floating-point registers.
+    keywords:
+      - initializeRegister
+      - readRegister
+      - register initialization
+      - verifyInitialization
+    role_hint: support_example
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: api_um_5_5_3_reserve_register
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: apiDoc_section
+    path: workspace/agentDoc/forceRV/apiDoc/FORCE-RISCV_User_Manual-v0.8.md
+    anchor: "### 5.5.3 reserveRegister"
+    line_start: 1140
+    line_end: 1170
+    title: reserveRegister
+    summary: >
+      Defines reservation access modes and explains that the default Write
+      reservation still allows the register to be used as a source operand.
+    keywords:
+      - reserveRegister
+      - register control
+      - Write
+      - Read
+      - ReadWrite
+      - source operand
+    role_hint: required_api
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: api_um_5_5_5_unreserve_register
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: apiDoc_section
+    path: workspace/agentDoc/forceRV/apiDoc/FORCE-RISCV_User_Manual-v0.8.md
+    anchor: "### 5.5.5 unreserveRegister"
+    line_start: 1199
+    line_end: 1252
+    title: unreserveRegister
+    summary: >
+      Documents the need to unreserve with the same access attribute that was
+      used during reservation; partial release can leave the register still
+      reserved for some access modes.
+    keywords:
+      - unreserveRegister
+      - access attribute
+      - ReadWrite
+      - cleanup
+      - reservation semantics
+    role_hint: required_api
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: api_um_5_5_6_is_register_reserved
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: apiDoc_section
+    path: workspace/agentDoc/forceRV/apiDoc/FORCE-RISCV_User_Manual-v0.8.md
+    anchor: "### 5.5.6 isRegisterReserved"
+    line_start: 1253
+    line_end: 1275
+    title: isRegisterReserved
+    summary: >
+      Describes how to check reservation state for a specific access mode and
+      how the default access differs from an explicit Read or Write query.
+    keywords:
+      - isRegisterReserved
+      - reservation check
+      - Read
+      - Write
+    role_hint: required_api
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: api_um_5_5_9_initialize_register
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: apiDoc_section
+    path: workspace/agentDoc/forceRV/apiDoc/FORCE-RISCV_User_Manual-v0.8.md
+    anchor: "### 5.5.9 initializeRegister"
+    line_start: 1321
+    line_end: 1348
+    title: initializeRegister
+    summary: >
+      API signature and semantics for initializing a register or register field
+      to a specific value before instruction generation.
+    keywords:
+      - initializeRegister
+      - register setup
+      - initial value
+    role_hint: required_api
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: api_um_5_9_5_modify_dependence_choices
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: apiDoc_section
+    path: workspace/agentDoc/forceRV/apiDoc/FORCE-RISCV_User_Manual-v0.8.md
+    anchor: "### 5.9.5 modifyDependenceChoices"
+    line_start: 1989
+    line_end: 2036
+    title: modifyDependenceChoices
+    summary: >
+      API reference for changing dependency weights, including valid setting
+      names such as Register Dependency and Source Dependency.
+    keywords:
+      - modifyDependenceChoices
+      - dependency weights
+      - Register Dependency
+      - Source Dependency
+      - Target Dependency
+    role_hint: required_api
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: api_um_6_5_controlled_dependency
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: apiDoc_section
+    path: workspace/agentDoc/forceRV/apiDoc/FORCE-RISCV_User_Manual-v0.8.md
+    anchor: "## 6.5 Controlled way to setup instruction dependency"
+    line_start: 2933
+    line_end: 3026
+    title: Controlled way to setup instruction dependency
+    summary: >
+      Sequence-level example showing how to build explicit writer-reader
+      dependencies using queryInstructionRecord or direct operand assignment.
+    keywords:
+      - queryInstructionRecord
+      - explicit dependency
+      - RAW
+      - rs1
+      - rd
+    role_hint: required_api
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window
+
+  - unit_id: api_um_7_1_register_dependency_controls
+    cluster_id: cluster_01_register_dependency
+    cluster_name: register/dependency
+    source_type: apiDoc_section
+    path: workspace/agentDoc/forceRV/apiDoc/FORCE-RISCV_User_Manual-v0.8.md
+    anchor: "## 7.1 Register dependency controls"
+    line_start: 3141
+    line_end: 3158
+    title: Register dependency controls
+    summary: >
+      Defines the Inter-Dependency Window variable and explains how dependency
+      candidates are chosen from a recent instruction window.
+    keywords:
+      - Inter-Dependency Window
+      - dependency window
+      - register dependency controls
+    role_hint: required_api
+    required_for_case_ids:
+      - case_001_register_dependency_reserved_window

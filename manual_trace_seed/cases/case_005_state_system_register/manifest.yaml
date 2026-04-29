@@ -1,0 +1,101 @@
+schema_version: 1
+case_id: case_005_state_system_register_transition
+cluster_id: cluster_03_state_system_register
+cluster_name: state/system-register
+status: manual_seed
+task_name: manual-case-005-state-system-register
+primary_example_unit: ex_state_transition_system_registers_default_force
+support_example_units:
+  - ex_state_transition_multi_state_force
+  - ex_state_transition_vm_context_default_force
+  - ex_state_transition_by_priority_force
+required_api_units:
+  - api_um_5_5_7_readRegister
+  - api_um_5_5_9_initializeRegister
+  - api_um_5_5_10_initializeRegisterFields
+  - api_um_5_5_11_randomInitializeRegister
+  - api_um_5_5_13_getRegisterIndex
+  - api_um_5_5_15_getRegisterInfo
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: medium
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The generator-facing plan must describe the system-register behavior only.
+    Knowledge references stay in this manifest and the unit catalog.
+expected_source_mix:
+  example_min_hits: 2
+  api_min_hits: 3
+  nav_expected: true
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_state_transition_system_registers_default_force
+    - nav_api_index
+    - api_um_5_5_9_initializeRegister
+    - api_um_5_5_11_randomInitializeRegister
+    - ex_state_transition_multi_state_force
+    - api_um_5_5_7_readRegister
+    - api_um_5_5_13_getRegisterIndex
+    - ex_state_transition_vm_context_default_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 1
+test_plan:
+  objective: >
+    Generate a stateful script that establishes a baseline system-register
+    state, changes that state in a later phase, and verifies the result.
+  behavioral_requirements:
+    - >
+      The script should have at least two state phases with a clear transition
+      between them.
+    - >
+      One phase should establish a known system-register value or field before
+      any verification step.
+    - >
+      Another phase should alter a different system-register field or a related
+      state component and then check the result.
+    - >
+      The script should keep system-register handling central rather than
+      treating it as incidental setup.
+  completion_requirements:
+    - >
+      The script should not rely on paging, exceptions, multiprocessing, or
+      large unrelated instruction streams.
+    - >
+      The script should include a read-back or equivalent verification step for
+      the system-register state.
+    - >
+      The script should finish cleanly after verification.
+retrieval_contract:
+  example_style_anchor:
+    - ex_state_transition_system_registers_default_force
+  api_sensitive_traps:
+    - >
+      The generator should need to understand both whole-register and
+      field-level state updates.
+    - >
+      The generator should need to read back register values to confirm the
+      state transition outcome.
+    - >
+      The generator should benefit from knowing how register identity and
+      register metadata are queried before state manipulation.
+manual_review_focus:
+  - >
+    Did the agent build a true state-transition story instead of a flat list of
+    register writes?
+  - >
+    Did the generated script verify the final register state?
+  - >
+    Does the case force the agent to think about system registers, not just GPRs?
+notes: >
+  This is the system-register bootstrap case for the manual seed set. It is
+  meant to validate state transitions and read-back verification.

@@ -1,0 +1,65 @@
+schema_version: 1
+case_id: case_019_ooo_scoreboard_hazard
+cluster_id: cluster_17_ooo_scoreboard
+cluster_name: ooo-scheduling/scoreboard-hazard
+status: manual_seed
+task_name: manual-case-019-ooo-scoreboard-hazard
+primary_example_unit: ex_api_reg_dependence_force
+support_example_units:
+  - ex_api_reserve_register_test
+  - ex_api_initialize_register_test
+  - ex_state_transition_state_transition_system_registers_default_force
+  - ex_branch_pc_relative_conditional_force
+required_api_units:
+  - api_um_5_9_5_modify_dependence_choices
+  - api_um_6_5_controlled_dependency
+  - api_um_7_1_register_dependency_controls
+  - api_um_5_5_3_reserve_register
+  - api_um_5_5_5_unreserve_register
+  - api_um_5_5_9_initialize_register
+  - api_um_5_10_1_modify_variable
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 7
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 9
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate an OoO-focused dependency stress script with mixed RAW/WAW/WAR
+    hazard windows and explicit recovery segments.
+  behavioral_requirements:
+    - Build long and short dependency chains around hot GPRs.
+    - Mix dependency types while keeping comparable templates.
+    - Include post-hazard recovery markers.
+  completion_requirements:
+    - Cover all three hazard types and terminate cleanly.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_api_reg_dependence_force
+    api_sensitive_traps:
+      - >
+        Requires controlled-dependency and inter-window semantics beyond random
+        ALU streams.
+      - >
+        Requires reservation/initialization semantics to protect hot registers.
+manual_review_focus:
+  - Did retrieval include dependency controls and register reservation sections?
+  - Are hazard windows and recovery windows both explicit?
+notes: >
+  Microarchitecture-specialized case targeting OoO scoreboard hazard handling.

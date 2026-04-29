@@ -1,0 +1,98 @@
+schema_version: 1
+case_id: case_003_address_memory_reuse_window
+cluster_id: cluster_03_address_memory
+cluster_name: address/memory
+status: manual_seed
+task_name: manual-case-003-address-memory
+primary_example_unit: ex_address_solving_address_reuse_force
+support_example_units:
+  - ex_address_solving_basic_load_store_force
+  - ex_api_genVA_01_force
+  - ex_api_genVAforPA_alias_force
+required_api_units:
+  - api_um_5_3_2_genVA
+  - api_um_5_3_3_genVAforPA
+  - api_um_5_8_1_initializeMemory
+  - guide_memory_operations_genVA
+  - guide_memory_operations_genVAforPA
+  - guide_memory_operations_LSTarget
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: medium
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The generator-facing prompt must only describe address and memory
+    behavior. Example/API references stay in the manifest for evaluation.
+expected_source_mix:
+  example_min_hits: 2
+  api_min_hits: 3
+  nav_expected: true
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_address_solving_address_reuse_force
+    - nav_api_index
+    - guide_memory_operations_genVA
+    - ex_api_genVA_01_force
+    - api_um_5_3_2_genVA
+    - ex_api_genVAforPA_alias_force
+    - api_um_5_3_3_genVAforPA
+    - api_um_5_8_1_initializeMemory
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 1
+test_plan:
+  objective: >
+    Generate a RV64 single-thread script that allocates a bounded data region,
+    reuses at least one address inside that region, and initializes memory
+    before any read path consumes it.
+  behavioral_requirements:
+    - >
+      The script should allocate a local data region that stays small enough to
+      reason about as a single window.
+    - >
+      The script should include at least one fresh address creation and at
+      least one later reuse of an existing address within the same window.
+    - >
+      The script should initialize memory before the first read that depends on
+      that location.
+    - >
+      The script should mix load and store activity so the same region is both
+      written and read.
+  completion_requirements:
+    - >
+      The script must end with a clean exit after the memory traffic.
+    - >
+      The sequence must show repeated access to the same bounded address
+      window.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_address_solving_address_reuse_force
+    api_sensitive_traps:
+      - >
+        The first read from a location must happen only after the memory is
+        initialized or written, otherwise the window is not well-defined.
+      - >
+        The script should reuse an existing address mapping rather than invent
+        a new one every time.
+      - >
+        The bounded region should stay compact enough that the same local
+        address window is visibly reused.
+manual_review_focus:
+  - >
+    Does the generated script show address reuse rather than one-off accesses?
+  - >
+    Is memory initialized before the first read that depends on it?
+  - >
+    Does the retrieval trace stay within the address/memory cluster?
+notes: >
+  This is the third bootstrap case for the manual-labeling phase. It is
+  intended to validate address generation and memory reuse behavior.

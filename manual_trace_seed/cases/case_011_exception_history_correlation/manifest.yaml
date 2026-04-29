@@ -1,0 +1,85 @@
+schema_version: 1
+case_id: case_011_exception_history_correlation
+cluster_id: cluster_09_exception_history
+cluster_name: exception-history/correlation
+status: manual_seed
+task_name: manual-case-011-exception-history-correlation
+primary_example_unit: ex_exception_handlers_exception_counts_force
+support_example_units:
+  - ex_exception_handlers_trap_vm_force
+  - ex_exception_handlers_ecall_ebreak_force
+  - ex_paging_access_fault_on_branch
+  - ex_paging_access_fault_on_load_store
+required_api_units:
+  - api_um_5_6_1_query_exception_vector_base_address
+  - api_um_5_6_2_query_exception_records_count
+  - api_um_5_6_3_query_exception_records
+  - api_um_5_6_4_query_exceptions
+  - api_um_5_5_7_readRegister
+  - api_um_5_10_1_modify_variable
+  - isa_privileged_exception_model
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The prompt must remain behavior-level. Exception-history API anchors are
+    evaluation labels only.
+expected_source_mix:
+  example_min_hits: 6
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 8
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_exception_handlers_exception_counts_force
+    - ex_exception_handlers_trap_vm_force
+    - nav_api_index
+    - api_um_5_6_2_query_exception_records_count
+    - api_um_5_6_3_query_exception_records
+    - ex_exception_handlers_ecall_ebreak_force
+    - api_um_5_6_4_query_exceptions
+    - ex_paging_access_fault_on_load_store
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a script that triggers multiple exception classes and validates
+    their chronological and contextual correlation through post-trap checks.
+  behavioral_requirements:
+    - >
+      Trigger repeated traps of at least one class from distinct trigger sites.
+    - >
+      Mix trap classes across different privilege contexts.
+    - >
+      Include explicit post-trap anchor blocks to prove return-path continuity.
+  completion_requirements:
+    - >
+      Include at least five trap events and terminate cleanly.
+    - >
+      End with x10/a0 zero then M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_exception_handlers_exception_counts_force
+    api_sensitive_traps:
+      - >
+        Requires history-count and record-query semantics beyond single-trap
+        generation.
+      - >
+        Requires cross-checking trap class and privilege-source dimensions.
+manual_review_focus:
+  - Did retrieval include both trap generation and trap-history query materials?
+  - Are repeated same-class different-site traps clearly encoded?
+notes: >
+  This case stresses niche exception-history semantics that are usually missed
+  by shallow search.

@@ -1,0 +1,112 @@
+schema_version: 1
+case_id: case_006_privilege_paging_fault_chain
+cluster_id: cluster_04_privilege_paging
+cluster_name: privilege-switch/paging-fault
+status: manual_seed
+task_name: manual-case-006-privilege-paging-fault
+primary_example_unit: ex_state_transition_vm_context_default_force
+support_example_units:
+  - ex_state_transition_multi_state_force
+  - ex_address_solving_basic_load_store_force
+  - ex_api_genVAforPA_alias_force
+  - ex_state_transition_by_priority_force
+required_api_units:
+  - api_um_5_5_9_initialize_register
+  - api_um_5_5_10_initialize_register_fields
+  - api_um_5_5_7_readRegister
+  - api_um_5_3_2_genVA
+  - api_um_5_3_3_genVAforPA
+  - api_um_5_8_1_initializeMemory
+  - guide_memory_operations_genVA
+  - guide_memory_operations_genVAforPA
+  - guide_memory_operations_LSTarget
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The generator-facing prompt must only describe instruction-level behavior.
+    Retrieval route constraints are retained in manifest for trace evaluation.
+expected_source_mix:
+  example_min_hits: 4
+  api_min_hits: 6
+  nav_expected: true
+  cross_source_switch_min: 4
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_state_transition_vm_context_default_force
+    - ex_state_transition_multi_state_force
+    - nav_api_index
+    - api_um_5_5_10_initialize_register_fields
+    - api_um_5_5_7_readRegister
+    - ex_address_solving_basic_load_store_force
+    - guide_memory_operations_genVA
+    - ex_api_genVAforPA_alias_force
+    - api_um_5_3_3_genVAforPA
+    - guide_memory_operations_LSTarget
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a high-complexity RV64 script that combines privilege state
+    transitions, address translation setup, and at least one page-fault access
+    in a single controlled sequence.
+  behavioral_requirements:
+    - >
+      The script should establish a known privileged baseline before any memory
+      traffic is generated.
+    - >
+      The script should include both successful translated memory accesses and
+      at least one intentionally faulting access.
+    - >
+      The faulting access should be near-neighbor to a successful access in
+      address-construction logic, differing mainly by mapping or permission
+      attributes.
+    - >
+      The script should continue with a short post-fault convergence block and
+      terminate cleanly.
+  completion_requirements:
+    - >
+      The sequence must show at least two successful memory operations and one
+      page-fault-style memory operation.
+    - >
+      The control flow should remain readable with clear stage boundaries.
+    - >
+      The script ends by setting x10/a0 to zero and issuing M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_state_transition_vm_context_default_force
+    api_sensitive_traps:
+      - >
+        Correct state sequencing requires both register-state setup semantics
+        and memory-address generation semantics.
+      - >
+        A robust fault-vs-success contrast requires understanding how nearby
+        virtual addresses can differ by translation status.
+      - >
+        The post-fault convergence section should preserve observability and
+        must not collapse into unrelated random traffic.
+manual_review_focus:
+  - >
+    Did the agent retrieve both state-transition and memory-addressing
+    materials instead of staying in one subtree?
+  - >
+    Is the fault scenario explicitly contrasted against a successful translated
+    access?
+  - >
+    Does the trace show frequent and purposeful cross-source switching between
+    examples and apiDoc sections?
+notes: >
+  This is a high-risk stretch case intended to stress index navigation depth
+  and cross-source retrieval discipline under a complex microarchitectural
+  behavior target.

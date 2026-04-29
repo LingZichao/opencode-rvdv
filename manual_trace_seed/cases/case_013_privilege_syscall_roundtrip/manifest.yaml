@@ -1,0 +1,77 @@
+schema_version: 1
+case_id: case_013_privilege_syscall_roundtrip
+cluster_id: cluster_11_privilege_syscall
+cluster_name: privilege-switch/syscall-roundtrip
+status: manual_seed
+task_name: manual-case-013-privilege-syscall-roundtrip
+primary_example_unit: ex_privilege_switch_system_call_sequence_force
+support_example_units:
+  - ex_privilege_switch_system_call_gen_va_force
+  - ex_privilege_switch_privilege_switch_ret_force
+  - ex_state_transition_state_transition_privilege_level_default_force
+  - ex_exception_handlers_ecall_ebreak_force
+required_api_units:
+  - api_um_5_5_7_readRegister
+  - api_um_5_5_10_initialize_register_fields
+  - api_um_5_6_4_query_exceptions
+  - api_um_5_10_1_modify_variable
+  - isa_privileged_exception_model
+  - isa_2_5_control_transfer_instructions
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 6
+  api_min_hits: 7
+  nav_expected: true
+  cross_source_switch_min: 8
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_privilege_switch_system_call_sequence_force
+    - ex_privilege_switch_privilege_switch_ret_force
+    - nav_api_index
+    - api_um_5_6_4_query_exceptions
+    - ex_exception_handlers_ecall_ebreak_force
+    - api_um_5_5_10_initialize_register_fields
+    - ex_state_transition_state_transition_privilege_level_default_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a multi-round syscall privilege-roundtrip script with explicit
+    post-return state and path-consistency checks.
+  behavioral_requirements:
+    - >
+      Trigger syscall-like traps in at least two different context settings.
+    - >
+      Return to deterministic anchor blocks after each round.
+    - >
+      Validate state continuity after returns.
+  completion_requirements:
+    - >
+      Include at least four syscall triggers and terminate cleanly with
+      x10/a0=0 then M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_privilege_switch_system_call_sequence_force
+    api_sensitive_traps:
+      - >
+        Requires tight coupling of syscall examples with privilege/state query
+        APIs.
+manual_review_focus:
+  - Did retrieval combine syscall and privilege-state sources?
+  - Are return anchors and post-return checks explicit?
+notes: >
+  This case targets rare syscall-roundtrip details beyond basic privilege
+  switching.

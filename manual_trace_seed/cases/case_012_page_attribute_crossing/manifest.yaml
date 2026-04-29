@@ -1,0 +1,82 @@
+schema_version: 1
+case_id: case_012_page_attribute_crossing
+cluster_id: cluster_10_page_attribute_crossing
+cluster_name: paging-attributes/page-crossing
+status: manual_seed
+task_name: manual-case-012-page-attribute-crossing
+primary_example_unit: ex_paging_paging_memory_attributes_basic_force
+support_example_units:
+  - ex_paging_paging_va_for_pa_memory_attributes_force
+  - ex_paging_page_fault_on_load_store_03_force
+  - ex_api_genVAforPA_alias_force
+  - ex_api_getPageInfo_01_force
+required_api_units:
+  - api_um_5_3_2_genVA
+  - api_um_5_3_3_genVAforPA
+  - api_um_5_8_1_initializeMemory
+  - api_um_5_9_3_modify_paging_choices
+  - api_um_5_10_1_modify_variable
+  - guide_memory_operations_genVA
+  - guide_memory_operations_genVAforPA
+  - guide_memory_operations_LSTarget
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 6
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 8
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_paging_paging_memory_attributes_basic_force
+    - ex_paging_paging_va_for_pa_memory_attributes_force
+    - nav_api_index
+    - api_um_5_9_3_modify_paging_choices
+    - ex_api_getPageInfo_01_force
+    - api_um_5_3_3_genVAforPA
+    - ex_paging_page_fault_on_load_store_03_force
+    - guide_memory_operations_LSTarget
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a script that contrasts multiple page-attribute windows, includes
+    page-crossing accesses, and exposes success-vs-restricted behavior.
+  behavioral_requirements:
+    - >
+      Reuse comparable address templates across different page-attribute
+      windows.
+    - >
+      Include both in-page and cross-page memory accesses.
+    - >
+      Include explicit stage signatures for window-level trace separation.
+  completion_requirements:
+    - >
+      Include both successful and restricted access windows and terminate
+      cleanly with x10/a0=0 then M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_paging_paging_memory_attributes_basic_force
+    api_sensitive_traps:
+      - >
+        Requires nuanced paging-choice and variable-modification semantics.
+      - >
+        Requires combining VA generation and VA-for-PA alias behavior.
+manual_review_focus:
+  - Did retrieval include memory-attribute examples plus paging-choice sections?
+  - Are cross-page and restricted-window behaviors both observable?
+notes: >
+  This case targets page-attribute and crossing subtleties that are often
+  under-specified in generic memory tests.

@@ -1,0 +1,108 @@
+schema_version: 1
+case_id: case_001_register_dependency_reserved_window
+cluster_id: cluster_01_register_dependency
+cluster_name: register/dependency
+status: manual_seed
+task_name: manual-case-001-register-dependency
+primary_example_unit: ex_api_reg_dependence_force
+support_example_units:
+  - ex_api_reserve_register_test
+  - ex_api_initialize_register_test
+required_api_units:
+  - api_um_5_9_5_modify_dependence_choices
+  - api_um_6_5_controlled_dependency
+  - api_um_7_1_register_dependency_controls
+  - api_um_5_5_3_reserve_register
+  - api_um_5_5_5_unreserve_register
+  - api_um_5_5_6_is_register_reserved
+  - api_um_5_5_9_initialize_register
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: medium
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The generator-facing test plan must describe target instruction behavior
+    only. Knowledge references stay in manifest/unit catalog for evaluation.
+expected_source_mix:
+  example_min_hits: 2
+  api_min_hits: 4
+  nav_expected: true
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_api_reg_dependence_force
+    - nav_api_index
+    - api_um_5_9_5_modify_dependence_choices
+    - api_um_6_5_controlled_dependency
+    - api_um_7_1_register_dependency_controls
+    - ex_api_reserve_register_test
+    - api_um_5_5_3_reserve_register
+    - api_um_5_5_5_unreserve_register
+    - api_um_5_5_9_initialize_register
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 1
+test_plan:
+  objective: >
+    Generate a FORCE-RISCV script that creates a narrow-window integer RAW
+    dependency scenario around a designated protected GPR.
+  behavioral_requirements:
+    - >
+      The script should contain a warm-up phase followed by an explicit
+      dependency burst phase.
+    - >
+      The warm-up phase should avoid using the designated protected register as
+      either a source or a destination in the generated integer ALU traffic.
+    - >
+      The dependency burst should emphasize short-range RAW dependencies rather
+      than broad unrelated random traffic.
+    - >
+      At least half of the writer-reader pairs should be built around the same
+      protected register.
+  completion_requirements:
+    - >
+      The protected register must carry a known non-zero value before the
+      dependency burst begins.
+    - >
+      The script should contain at least 6 warm-up ALU instructions and at
+      least 8 explicit writer-reader dependency pairs.
+    - >
+      The script ends with ADDI that sets x10/a0 to zero and then
+      M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_api_reg_dependence_force
+    api_sensitive_traps:
+      - >
+        The protected register should not be exposed to warm-up random traffic,
+        which usually requires the generator to understand reservation access
+        semantics.
+      - >
+        The protected register must be released correctly before dependency
+        pairs are generated, which requires matching reservation-release
+        semantics.
+      - >
+        A narrow recent-instruction dependency window is expected, which
+        usually requires the generator to consult dependency-control APIs or
+        variable sections.
+manual_review_focus:
+  - >
+    Did the agent consult both dependency-control sections and
+    register-control API sections?
+  - >
+    Did the generated script preserve the Write vs ReadWrite semantics
+    correctly?
+  - >
+    Is the retrieval trace concentrated inside the target cluster with only
+    limited detours?
+notes: >
+  This is the first bootstrap case for the manual-labeling phase. It is meant
+  to validate retrieval quality rather than maximize coverage difficulty.

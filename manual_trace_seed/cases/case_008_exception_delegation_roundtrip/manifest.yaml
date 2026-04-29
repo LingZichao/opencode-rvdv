@@ -1,0 +1,106 @@
+schema_version: 1
+case_id: case_008_exception_delegation_roundtrip
+cluster_id: cluster_06_exception_delegation
+cluster_name: exception-delegation/privilege-roundtrip
+status: manual_seed
+task_name: manual-case-008-exception-delegation-roundtrip
+primary_example_unit: ex_exception_handlers_trap_vm_force
+support_example_units:
+  - ex_exception_handlers_ecall_ebreak_force
+  - ex_exception_handlers_exception_counts_force
+  - ex_privilege_switch_system_call_sequence_force
+  - ex_privilege_switch_privilege_switch_ret_force
+  - ex_paging_access_fault_on_branch
+required_api_units:
+  - api_um_5_6_1_query_exception_vector_base_address
+  - api_um_5_6_2_query_exception_records_count
+  - api_um_5_6_3_query_exception_records
+  - api_um_5_6_4_query_exceptions
+  - api_um_5_5_7_readRegister
+  - api_um_5_5_10_initialize_register_fields
+  - api_um_5_9_3_modify_paging_choices
+  - api_um_5_10_1_modify_variable
+  - isa_privileged_exception_model
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    Keep the generator prompt strictly behavior-level. Detailed exception API
+    and document hooks remain manifest-side labels for retrieval evaluation.
+expected_source_mix:
+  example_min_hits: 5
+  api_min_hits: 7
+  nav_expected: true
+  cross_source_switch_min: 6
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_exception_handlers_trap_vm_force
+    - ex_exception_handlers_ecall_ebreak_force
+    - nav_api_index
+    - api_um_5_6_1_query_exception_vector_base_address
+    - api_um_5_6_4_query_exceptions
+    - ex_privilege_switch_system_call_sequence_force
+    - api_um_5_10_1_modify_variable
+    - ex_paging_access_fault_on_branch
+    - api_um_5_9_3_modify_paging_choices
+    - ex_exception_handlers_exception_counts_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a high-complexity exception-delegation script with multiple trap
+    sources, explicit privilege roundtrip behavior, and post-return state
+    consistency checks.
+  behavioral_requirements:
+    - >
+      The script should trigger at least two distinct trap-source patterns and
+      preserve clear phase boundaries in trace.
+    - >
+      The script should demonstrate that control returns to expected anchor
+      blocks after trap handling.
+    - >
+      The script should include one post-trap verification segment that checks
+      both system-state and data-path continuity.
+  completion_requirements:
+    - >
+      The sequence must contain at least three trap events and at least two
+      successful return-to-mainline events.
+    - >
+      The script must terminate cleanly with x10/a0 set to zero before
+      M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_exception_handlers_trap_vm_force
+    api_sensitive_traps:
+      - >
+        Accurate trap characterization requires exception history/query
+        semantics, not just generic branch control.
+      - >
+        Delegation-sensitive behavior requires knowledge of privilege context
+        transitions and vector-base handling.
+      - >
+        Return-path validation requires state readback and selective variable
+        controls to avoid noisy false positives.
+manual_review_focus:
+  - >
+    Did retrieval cover exception-history APIs plus privilege-switch examples,
+    instead of only one side?
+  - >
+    Are trap-source categories and return anchors both explicit and testable?
+  - >
+    Did the trajectory show deep cross-source navigation effort?
+notes: >
+  This high-risk case is designed to force fine-grained lookup of exception
+  query APIs and privilege-transition examples that are easy to miss in shallow
+  searches.

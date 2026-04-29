@@ -1,0 +1,66 @@
+schema_version: 1
+case_id: case_020_lsu_forwarding_order
+cluster_id: cluster_18_lsu_forwarding
+cluster_name: lsu-forwarding/memory-order-window
+status: manual_seed
+task_name: manual-case-020-lsu-forwarding-order
+primary_example_unit: ex_address_solving_basic_load_store_force
+support_example_units:
+  - ex_address_solving_address_reuse_force
+  - ex_api_genVA_reuse_force
+  - ex_api_genVAforPA_alias_force
+  - ex_paging_paging_loadstore_force
+required_api_units:
+  - api_um_5_3_2_genVA
+  - api_um_5_3_3_genVAforPA
+  - api_um_5_8_1_initializeMemory
+  - guide_memory_operations_genVA
+  - guide_memory_operations_genVAforPA
+  - guide_memory_operations_LSTarget
+  - api_um_5_10_1_modify_variable
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 7
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 9
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate an LSU-focused script that stresses store-to-load forwarding,
+    overlap-width interactions, and memory-order window boundaries.
+  behavioral_requirements:
+    - Build near-neighbor store-load pairs with explicit pattern values.
+    - Include overlap-only and width-only contrast pairs.
+    - Include order-window boundary markers and replay checks.
+  completion_requirements:
+    - Cover forwarding, overlap, and replay categories and terminate cleanly.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_address_solving_basic_load_store_force
+    api_sensitive_traps:
+      - >
+        Requires coordinated address generation, initialization, and load/store
+        target controls.
+      - >
+        Requires trace-friendly windowing for order-boundary analysis.
+manual_review_focus:
+  - Did retrieval include address reuse plus load/store target semantics?
+  - Are forwarding pairs and overlap windows explicitly isolated?
+notes: >
+  Microarchitecture-specialized case targeting LSU forwarding and ordering
+  behavior under tight address windows.

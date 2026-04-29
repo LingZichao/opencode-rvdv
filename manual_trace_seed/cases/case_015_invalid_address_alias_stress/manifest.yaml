@@ -1,0 +1,82 @@
+schema_version: 1
+case_id: case_015_invalid_address_alias_stress
+cluster_id: cluster_13_invalid_alias
+cluster_name: invalid-address/alias-contrast
+status: manual_seed
+task_name: manual-case-015-invalid-address-alias-stress
+primary_example_unit: ex_rv64_rv64_invalid_address_force
+support_example_units:
+  - ex_api_verifyVirtualAddress_01_force
+  - ex_api_getPageInfo_01_force
+  - ex_api_genVAforPA_alias_force
+  - ex_api_genVA_reuse_force
+  - ex_paging_paging_loadstore_force
+required_api_units:
+  - api_um_5_3_2_genVA
+  - api_um_5_3_3_genVAforPA
+  - api_um_5_8_1_initializeMemory
+  - api_um_5_10_1_modify_variable
+  - guide_memory_operations_genVA
+  - guide_memory_operations_genVAforPA
+  - guide_memory_operations_LSTarget
+  - isa_privileged_exception_model
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 7
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 9
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_rv64_rv64_invalid_address_force
+    - ex_api_verifyVirtualAddress_01_force
+    - nav_api_index
+    - api_um_5_3_3_genVAforPA
+    - ex_api_genVAforPA_alias_force
+    - guide_memory_operations_genVAforPA
+    - ex_api_getPageInfo_01_force
+    - ex_api_genVA_reuse_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate an address-family stress script contrasting valid, alias, and
+    invalid address behaviors with explicit phase signatures.
+  behavioral_requirements:
+    - >
+      Include reusable alias-window accesses and explicit invalid-window
+      attempts.
+    - >
+      Keep at least one data template shared between valid and alias windows.
+    - >
+      Maintain stage-level markers for trace segmentation.
+  completion_requirements:
+    - >
+      Include all three address-family categories and terminate cleanly with
+      x10/a0=0 then M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_rv64_rv64_invalid_address_force
+    api_sensitive_traps:
+      - >
+        Requires combining address verification, page info, alias VA-for-PA
+        mapping, and load-store target semantics.
+manual_review_focus:
+  - Did retrieval include invalid-address plus alias/verification materials?
+  - Are valid-vs-alias-vs-invalid phases explicitly separated?
+notes: >
+  This case targets cold address-validation and aliasing details that require
+  deliberate multi-source retrieval.

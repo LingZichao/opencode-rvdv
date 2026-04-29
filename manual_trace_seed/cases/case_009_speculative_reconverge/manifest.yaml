@@ -1,0 +1,100 @@
+schema_version: 1
+case_id: case_009_speculative_reconverge_window
+cluster_id: cluster_07_speculative_reconverge
+cluster_name: speculative-branch/reconverge
+status: manual_seed
+task_name: manual-case-009-speculative-reconverge
+primary_example_unit: ex_bnt_speculative_bnt_force
+support_example_units:
+  - ex_loop_loop_reconverge_force
+  - ex_loop_loop_unconditional_branches_force
+  - ex_branch_pc_relative_conditional_force
+  - ex_branch_register_force
+required_api_units:
+  - isa_2_5_2_conditional_branches
+  - isa_2_5_1_unconditional_jumps
+  - isa_2_5_control_transfer_instructions
+  - api_um_5_10_1_modify_variable
+  - api_um_5_9_5_modify_dependence_choices
+  - api_um_6_5_controlled_dependency
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    Only describe behavior-level control-flow pressure. Keep retrieval-specific
+    hints in this manifest for trajectory scoring.
+expected_source_mix:
+  example_min_hits: 5
+  api_min_hits: 6
+  nav_expected: true
+  cross_source_switch_min: 6
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_bnt_speculative_bnt_force
+    - ex_loop_loop_reconverge_force
+    - nav_api_index
+    - isa_2_5_2_conditional_branches
+    - ex_branch_pc_relative_conditional_force
+    - isa_2_5_1_unconditional_jumps
+    - ex_branch_register_force
+    - api_um_5_10_1_modify_variable
+    - ex_loop_loop_unconditional_branches_force
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a high-complexity control-flow script with multi-level split,
+    reconvergence, and indirect-jump re-entry behavior in one bounded window.
+  behavioral_requirements:
+    - >
+      The script should demonstrate both first-level and second-level branch
+      split behavior with explicit join points.
+    - >
+      The script should include at least two register-targeted jumps whose
+      targets are prepared in advance.
+    - >
+      The script should include one bounded loop-like back edge without causing
+      non-termination.
+    - >
+      Post-join behavior should consume path-signature state to prove
+      reconvergence correctness.
+  completion_requirements:
+    - >
+      The sequence must include both taken and not-taken outcomes multiple
+      times and terminate cleanly.
+    - >
+      The script must end with x10/a0 set to zero before M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_bnt_speculative_bnt_force
+    api_sensitive_traps:
+      - >
+        Distinguishing split/rejoin topology requires fine-grained branch and
+        jump semantics, not only generic control-flow generation.
+      - >
+        Stable reconvergence depends on selective state updates and controlled
+        dependency shaping.
+      - >
+        Loop-like back edges must be bounded and evidence-friendly in trace.
+manual_review_focus:
+  - >
+    Did retrieval combine speculative-bnt, loop reconverge, and branch-jump
+    references instead of staying in one local pattern?
+  - >
+    Are both reconvergence points explicit and analyzable in trace?
+  - >
+    Does the agent show multi-step cross-source exploration effort?
+notes: >
+  This case is designed to force nuanced lookup of speculative control-flow and
+  reconvergence patterns that shallow retrieval often misses.

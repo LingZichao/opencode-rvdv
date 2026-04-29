@@ -10,6 +10,8 @@ opencode.jsonc
 logs/
 fsdbdebugLog/
 *.log
+workspace/manual_generator_runs/
+workspace/isgScripts/manual_benchmark/
 
 # 覆盖率任务数据（可选提交）
 coverageDB/tasks/
@@ -29,6 +31,7 @@ openc910
 .idea/
 
 # 临时文件
+.codex
 *.tmp
 *.swp
 .DS_Store

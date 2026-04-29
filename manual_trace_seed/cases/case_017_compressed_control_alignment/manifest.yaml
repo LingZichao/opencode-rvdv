@@ -1,0 +1,61 @@
+schema_version: 1
+case_id: case_017_compressed_control_alignment
+cluster_id: cluster_15_compressed_control
+cluster_name: compressed-instruction/control-alignment
+status: manual_seed
+task_name: manual-case-017-compressed-control-alignment
+primary_example_unit: ex_instructions_c_instructions_rv64_group
+support_example_units:
+  - ex_instructions_c_instructions_group
+  - ex_branch_pc_relative_conditional_force
+  - ex_branch_register_force
+  - ex_exception_handlers_instruction_misaligned_exception_force
+required_api_units:
+  - api_um_5_1_1_genInstruction
+  - isa_2_5_1_unconditional_jumps
+  - isa_2_5_2_conditional_branches
+  - isa_2_5_control_transfer_instructions
+  - api_um_5_10_1_modify_variable
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 6
+  api_min_hits: 7
+  nav_expected: true
+  cross_source_switch_min: 8
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a mixed compressed/non-compressed control-flow script emphasizing
+    target alignment and reconvergence behavior.
+  behavioral_requirements:
+    - Mix C-extension instructions with regular instructions in branch regions.
+    - Include explicit target-construction for indirect jumps.
+    - Provide at least one alignment-candidate window with post-window recovery.
+  completion_requirements:
+    - Include multiple split/join control-flow patterns and cleanly terminate.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_instructions_c_instructions_rv64_group
+    api_sensitive_traps:
+      - Requires instruction-length-aware control-flow reasoning.
+      - Requires alignment-sensitive target setup under mixed-width blocks.
+manual_review_focus:
+  - Did retrieval include compressed-instruction groups plus branch docs?
+  - Are alignment-candidate and reconvergence windows explicit?
+notes: >
+  New direction: compressed-instruction control alignment, absent in prior
+  non-vector case set.

@@ -1,0 +1,66 @@
+schema_version: 1
+case_id: case_018_page_allocator_fragmentation
+cluster_id: cluster_16_page_allocator_fragmentation
+cluster_name: page-allocation/fragmentation-stress
+status: manual_seed
+task_name: manual-case-018-page-allocator-fragmentation
+primary_example_unit: ex_api_genFreePagesRange_01_force
+support_example_units:
+  - ex_api_genPA_01_force
+  - ex_api_genVA_02_force
+  - ex_api_genVA_reuse_force
+  - ex_paging_paging_force
+  - ex_paging_paging_loadstore_force
+required_api_units:
+  - api_um_5_3_1_genPA
+  - api_um_5_3_2_genVA
+  - api_um_5_3_3_genVAforPA
+  - api_um_5_8_1_initializeMemory
+  - api_um_5_9_3_modify_paging_choices
+  - api_um_5_10_1_modify_variable
+  - guide_memory_operations_genVA
+  - guide_memory_operations_LSTarget
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 7
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 9
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a paging script that stresses fragmented page allocation ranges,
+    mixed successful reuse, and restricted mapping candidates.
+  behavioral_requirements:
+    - Use both large and fragmented ranges with repeated access templates.
+    - Include successful mapping reuse and restricted/failed candidate windows.
+    - Keep phase signatures explicit for trace segmentation.
+  completion_requirements:
+    - Cover all range categories and terminate cleanly with x10/a0=0 then
+      M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_api_genFreePagesRange_01_force
+    api_sensitive_traps:
+      - Requires allocator-range and paging-choice semantics, not only basic VA.
+      - Requires balancing PA/VA generation with memory target constraints.
+manual_review_focus:
+  - Did retrieval include free-page-range and PA/VA mixed examples?
+  - Are fragmented-range behaviors explicitly contrasted with large ranges?
+notes: >
+  New direction: page allocator fragmentation stress, previously uncovered by
+  existing case set.

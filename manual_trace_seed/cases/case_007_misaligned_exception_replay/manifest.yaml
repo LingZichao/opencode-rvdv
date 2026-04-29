@@ -1,0 +1,110 @@
+schema_version: 1
+case_id: case_007_misaligned_exception_replay_chain
+cluster_id: cluster_05_misaligned_exception
+cluster_name: misaligned-access/exception-recovery
+status: manual_seed
+task_name: manual-case-007-misaligned-exception-replay
+primary_example_unit: ex_address_solving_address_reuse_force
+support_example_units:
+  - ex_address_solving_basic_load_store_force
+  - ex_branch_pc_relative_conditional_force
+  - ex_branch_register_force
+  - ex_state_transition_by_priority_force
+required_api_units:
+  - api_um_5_3_2_genVA
+  - api_um_5_8_1_initializeMemory
+  - guide_memory_operations_genVA
+  - guide_memory_operations_LSTarget
+  - isa_2_5_2_conditional_branches
+  - isa_2_5_1_unconditional_jumps
+  - isa_2_5_control_transfer_instructions
+  - api_um_5_5_7_readRegister
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+  note: >
+    The generator-facing prompt should only describe instruction behavior and
+    acceptance conditions. Retrieval hints remain manifest-side labels.
+expected_source_mix:
+  example_min_hits: 4
+  api_min_hits: 6
+  nav_expected: true
+  cross_source_switch_min: 5
+  preferred_trace_shape:
+    - nav_example_agents
+    - ex_address_solving_address_reuse_force
+    - ex_address_solving_basic_load_store_force
+    - nav_api_index
+    - guide_memory_operations_LSTarget
+    - api_um_5_3_2_genVA
+    - ex_branch_pc_relative_conditional_force
+    - isa_2_5_2_conditional_branches
+    - ex_branch_register_force
+    - isa_2_5_1_unconditional_jumps
+    - api_um_5_8_1_initializeMemory
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a high-complexity RV64 script that alternates aligned and
+    intentionally misaligned memory accesses, triggers an exception-style path,
+    and then resumes execution in a controlled replay block.
+  behavioral_requirements:
+    - >
+      The script should establish an aligned memory baseline and verify at
+      least one successful aligned load-store pair before misaligned access is
+      attempted.
+    - >
+      The script should include explicit offset construction that creates
+      misaligned accesses for at least two memory-access widths.
+    - >
+      The script should include a post-exception recovery and replay segment
+      that reuses the same address family.
+    - >
+      The script should use control-flow markers to make pre-exception,
+      exception, and post-exception phases distinguishable in trace.
+  completion_requirements:
+    - >
+      The sequence must include at least one observable exception-style event
+      caused by misalignment candidates.
+    - >
+      The script should continue after the exception window and terminate
+      cleanly.
+    - >
+      The script ends by setting x10/a0 to zero and issuing M5EXIT##RISCV.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_address_solving_address_reuse_force
+    api_sensitive_traps:
+      - >
+        Misalignment pressure requires precise address-offset control, not just
+        random memory traffic.
+      - >
+        The recovery replay path should preserve address-family continuity and
+        must coordinate memory and control-flow semantics.
+      - >
+        The script should keep exception-related behavior explicit enough for
+        phase-level trace annotation.
+manual_review_focus:
+  - >
+    Did the agent retrieve both memory-addressing and control-flow materials to
+    shape the exception/recovery boundary?
+  - >
+    Are aligned and misaligned windows clearly separated and both testable?
+  - >
+    Does retrieval behavior show deeper index traversal than medium cases,
+    including multiple cross-source switches?
+notes: >
+  This is a high-risk stretch case designed to amplify pressure on index
+  structure, retrieval depth, and trace annotation granularity.

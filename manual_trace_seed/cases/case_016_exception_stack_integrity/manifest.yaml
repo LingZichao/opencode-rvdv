@@ -1,0 +1,61 @@
+schema_version: 1
+case_id: case_016_exception_stack_integrity
+cluster_id: cluster_14_exception_stack
+cluster_name: exception-handler/stack-integrity
+status: manual_seed
+task_name: manual-case-016-exception-stack-integrity
+primary_example_unit: ex_exception_handlers_stack_force
+support_example_units:
+  - ex_exception_handlers_assembly_helper_force
+  - ex_exception_handlers_access_csrs_force
+  - ex_exception_handlers_trap_vm_force
+  - ex_exception_handlers_exception_counts_force
+required_api_units:
+  - api_um_5_6_1_query_exception_vector_base_address
+  - api_um_5_6_2_query_exception_records_count
+  - api_um_5_6_4_query_exceptions
+  - api_um_5_5_7_readRegister
+  - api_um_5_8_1_initializeMemory
+  - isa_privileged_exception_model
+navigation_units:
+  - nav_example_agents
+  - nav_api_index
+risk_tier: high
+test_plan_path: ./test_plan.md
+generator_input_contract:
+  style: behavioral_only
+  disallow:
+    - reference_file_paths
+    - api_name_lists
+    - retrieval_instructions
+expected_source_mix:
+  example_min_hits: 6
+  api_min_hits: 8
+  nav_expected: true
+  cross_source_switch_min: 8
+retrieval_acceptance:
+  target_cluster_hit_required: true
+  target_cluster_example_hit_required: true
+  target_cluster_api_hit_required: true
+  wrong_cluster_detour_budget: 2
+test_plan:
+  objective: >
+    Generate a multi-trap script that validates exception-handler stack
+    save/restore consistency across repeated trap-return cycles.
+  behavioral_requirements:
+    - Trigger at least two trap-source categories.
+    - Validate save/restore register groups after each return.
+    - Keep stack-window memory accesses localized and trace-friendly.
+  completion_requirements:
+    - Include at least four trap events and cleanly terminate.
+  retrieval_contract:
+    example_style_anchor:
+      - ex_exception_handlers_stack_force
+    api_sensitive_traps:
+      - Requires combining trap-history and register readback semantics.
+      - Requires stack-context persistence reasoning, not just trap count.
+manual_review_focus:
+  - Did retrieval include stack-specific exception-handler examples?
+  - Are save/restore checks explicit per trap round?
+notes: >
+  New direction: exception-handler stack integrity, not covered by prior cases.
