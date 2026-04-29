@@ -43,5 +43,5 @@ Reference material is located under `workspace/agentDoc/`. Read it only when nee
 - `C910VerifyNotes.md`: C910 coverage verification notes.
 - `C910ISA.txt` / `C910ISA_Agent_Friendly.md`: C910 ISA references.
 - `ISG_Script/`: Historical ISG script examples.
-- `forceRV/`: Force-RISCV API, configuration, examples, and instruction definition material.
+- `forceRV/INDEX.md` (总入口): Force-RISCV 文档层次化索引 — 渐进加载指南、常用 API 速查、Core API Index（高频 Topic）、高级功能映射表、示例学习路径。二级细节见 `forceRV/SUB_INDEX.md`，完整 Topic→Doc 映射见 `forceRV/TOPIC_TAG.md`。
 - `condition_coverage.md`: Condition coverage rule reference.

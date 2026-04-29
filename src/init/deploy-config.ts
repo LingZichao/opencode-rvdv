@@ -6,7 +6,7 @@ const SRC_DIR = path.join(PROJECT_ROOT, "src")
 
 function deployConfig() {
   const configFiles = [
-    { src: "config/opencode.json.tmpl", dest: "opencode.json", process: true },
+    { src: "config/opencode.json.tmpl", dest: "opencode.jsonc", process: true },
     { src: "config/server.json.tmpl", dest: ".opencode/server.json", process: true },
     { src: "config/permissions.json.tmpl", dest: ".opencode/permissions.json", process: false },
   ]

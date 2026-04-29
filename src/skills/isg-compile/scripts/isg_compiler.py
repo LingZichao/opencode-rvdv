@@ -14,7 +14,7 @@ from pathlib import Path
 
 def find_project_root():
     for parent in Path(__file__).resolve().parents:
-        if (parent / "opencode.json").exists() or (parent / "package.json").exists():
+        if (parent / "opencode.jsonc").exists() or (parent / "package.json").exists():
             return parent
     return Path.cwd()
 
@@ -173,8 +173,9 @@ def compile_script(script_path, output_dir=None):
         proc = subprocess.run(
             [str(force_riscv_bin), "-t", str(sim_script), "-c", str(config_path)],
             cwd=str(sim_root),
-            capture_output=True,
-            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
             timeout=300,
         )
 

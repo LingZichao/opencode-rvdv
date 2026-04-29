@@ -3,7 +3,7 @@ set -e
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-if [ ! -f "$PROJECT_ROOT/opencode.json" ]; then
+if [ ! -f "$PROJECT_ROOT/opencode.jsonc" ]; then
     echo "Project not initialized. Run: bun run src/init/init.ts"
     exit 1
 fi

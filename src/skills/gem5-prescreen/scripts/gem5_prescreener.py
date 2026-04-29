@@ -35,7 +35,7 @@ def path_is_relative_to(path, root):
 
 def find_project_root():
     for parent in Path(__file__).resolve().parents:
-        if (parent / "opencode.json").exists() or (parent / "package.json").exists():
+        if (parent / "opencode.jsonc").exists() or (parent / "package.json").exists():
             return parent
     return Path.cwd()
 

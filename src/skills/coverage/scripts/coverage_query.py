@@ -17,7 +17,7 @@ import requests
 def find_project_root():
     for parent in Path(__file__).resolve().parents:
         if (
-            (parent / "opencode.json").exists()
+            (parent / "opencode.jsonc").exists()
             or (parent / "coverageDB").exists()
         ) and (parent / "workspace").exists():
             return parent

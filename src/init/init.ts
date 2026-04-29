@@ -43,7 +43,7 @@ function generateConfig() {
     .replace(/\{\{OPENCODE_PORT\}\}/g, process.env.OPENCODE_PORT || "4096")
     .replace(/\{\{OPENCODE_HOSTNAME\}\}/g, process.env.OPENCODE_HOSTNAME || "0.0.0.0")
 
-  fs.writeFileSync(path.join(PROJECT_ROOT, "opencode.json"), config)
+  fs.writeFileSync(path.join(PROJECT_ROOT, "opencode.jsonc"), config)
 }
 
 function validateEnvironment() {
@@ -55,13 +55,8 @@ function validateEnvironment() {
 function createDirectories() {
   const dirs = [
     "workspace/agentDoc",
-    "workspace/ISG_Script",
     "workspace/isgScripts",
     "workspace/apvTraces",
-    "workspace/openc910",
-    "workspace/rtl",
-    ".opencode/skills/coverage/coverageDB/tasks",
-    ".opencode/skills/coverage/coverageDB/regression",
     "logs",
   ]
 

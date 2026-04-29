@@ -27,6 +27,18 @@
 3. 如果测试计划不明确，返回协调者澄清，不自行猜测。
 4. 如果脚本使用 `M5EXIT##RISCV` 结束 gem5 仿真，退出前必须显式清零 `a0/x10`，避免随机 delay 推迟 m5 exit。
 
+## ForceRV 文档参考
+
+编写 ISG 脚本时按需查阅文档，层次化索引入口为 `workspace/agentDoc/forceRV/INDEX.md`：
+
+| 文件 | 用途 | 何时查阅 |
+|------|------|---------|
+| `INDEX.md` | 总入口：渐进加载指南、常用 API 速查、Core API Index（高频 Topic）、高级功能映射表、示例学习路径 | 编写任何 ISG 脚本前先查此文件 |
+| `SUB_INDEX.md` | 低频/专用 Topic 索引（Vector Mask、Semaphore & Lock、PMA/MemAttr 等） | INDEX.md 未覆盖的专用功能 |
+| `TOPIC_TAG.md` | 完整 Topic + Hint + 源文件路径 + 行号映射 | 需要精确的源文件定位时 |
+
+查阅原则：先查 `INDEX.md` 的常用 API 速查表和 Core API Index，找不到再按 `SUB_INDEX.md` → `TOPIC_TAG.md` 逐级下钻。
+
 ## 最小脚本示例
 
 ```python
