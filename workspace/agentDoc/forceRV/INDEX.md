@@ -1,6 +1,6 @@
 # FORCE-RISCV Documentation Index
 
-> 总入口。二级细节见 [SUB_INDEX.md](SUB_INDEX.md)，完整 Topic→Doc 映射见 [TOPIC_TAG.md](TOPIC_TAG.md)。
+> 总入口。二级细节见 [SUB_INDEX.md](SUB_INDEX.md)，完整 Topic→Doc 映射见 [TOPIC_TAG.md](TOPIC_TAG.md)。常见错误见 [SUB-ERROR.md](SUB-ERROR.md)。
 
 ---
 
@@ -278,6 +278,7 @@
 | RISC-V_Unprivileged_ISA.md | [TOPIC_TAG.md:509](TOPIC_TAG.md#risc-v_unprivileged_isamd) | RV32I/RV64I + M/A/F/D/Q/C/B/V 扩展 |
 | README.md | [TOPIC_TAG.md:514](TOPIC_TAG.md#readmemd) | 快速入门 / 构建 / 运行 |
 | memory_operations_guide.md | [TOPIC_TAG.md:519](TOPIC_TAG.md#memory_operations_guidemd) | 内存操作完整指南 |
+| [SUB-ERROR.md](SUB-ERROR.md) | — | ISG 脚本开发常见错误与排查经验 |
 
 ---
 
@@ -296,3 +297,4 @@
 | Multiprocessing | Semaphore & Lock, Thread Context, Thread Group ×4 |
 | Vector | Vector Load/Store ×7, Vector Mask ×3, Vector Op Conflict ×3, Vector Scalar Move ×2, Vector Wide/FP, Vector AMO, Vector Coverage |
 | FP/Data/Framework | MUL/DIV/REM ×3, RandomUtils, Master Run, Inquiry APIs, Custom Entry Point, RV32I Base |
+| Error Debugging | SUB-ERROR.md — ISG 开发中踩过的坑与排查方法 |

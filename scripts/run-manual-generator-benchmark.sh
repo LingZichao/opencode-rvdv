@@ -259,18 +259,26 @@ SUMMARY_CSV="$RUN_DIR/summary.csv"
 if [[ "$DRY_RUN" -eq 0 ]]; then
   mkdir -p "$RUN_DIR"
   ln -sfn "$RUN_DIR" "$BENCH_ROOT/latest"
-  {
-    echo "RUN_ID=$RUN_ID"
-    echo "MODEL=$MODEL"
-    echo "AGENT=$AGENT"
-    echo "FORMAT=$FORMAT"
-    echo "ATTACH=$ATTACH"
-    echo "OPENCODE_CONFIG=${OPENCODE_CONFIG:-}"
-    echo "PROJECT_ROOT=$PROJECT_ROOT"
-    echo "CASES_ROOT=$CASES_ROOT"
-    echo "STARTED_AT=$(utc_now)"
-  } > "$RUN_DIR/run_config.env"
-  printf 'case,task_name,status,exit_code,duration_sec,test_plan,script_dir,log,status_json\n' > "$SUMMARY_CSV"
+  if [[ "$RESUME" -eq 1 && -f "$SUMMARY_CSV" ]]; then
+    {
+      echo "RESUMED_AT=$(utc_now)"
+      echo "RESUME_SELECTED_CASES=${#SELECTED_CASES[@]}"
+    } >> "$RUN_DIR/run_config.env"
+  else
+    {
+      echo "RUN_ID=$RUN_ID"
+      echo "MODEL=$MODEL"
+      echo "AGENT=$AGENT"
+      echo "FORMAT=$FORMAT"
+      echo "ATTACH=$ATTACH"
+      echo "OPENCODE_CONFIG=${OPENCODE_CONFIG:-}"
+      echo "PROJECT_ROOT=$PROJECT_ROOT"
+      echo "CASES_ROOT=$CASES_ROOT"
+      echo "SELECTED_CASES=${#SELECTED_CASES[@]}"
+      echo "STARTED_AT=$(utc_now)"
+    } > "$RUN_DIR/run_config.env"
+    printf 'case,task_name,status,exit_code,duration_sec,test_plan,script_dir,log,status_json\n' > "$SUMMARY_CSV"
+  fi
 fi
 
 echo "Manual generator benchmark"
@@ -323,30 +331,18 @@ for case_dir in "${SELECTED_CASES[@]}"; do
   fi
 
   cat > "$prompt_file" <<EOF
-你正在执行 OpenCode-RVDV manual generator benchmark 的一个独立 case。
+You are running an isolated case for the OpenCode-RVDV manual generator benchmark.
 
 Case: $case_name
 Task name: $task_name
-指定输出目录: $script_out
+Required output directory: $script_out
 
-请只把附加的 test_plan.md 当作 generator 输入需求。manifest.yaml、unit_catalog.yaml 以及 manual_trace_seed 的标注元数据只用于评测，不允许读取或引用。
+Use only the attached test_plan.md as the generator input.
 
-请按 .opencode/prompts/generator.md 的职责执行：
-1. 阅读附加 test_plan.md，生成一个完整 FORCE-RISCV Python ISG 脚本到指定输出目录。
-2. 需要时查阅 workspace/agentDoc/forceRV/ 下的本地文档与示例。
-3. 使用 isg-compile skill 编译；编译失败时只修复当前脚本并重试。
-4. 编译成功后使用 gem5-prescreen skill 做预筛选；引用 output.log 或 m5out/stats.txt 的具体证据。
-5. 不执行 RTL/VCS 仿真，不创建覆盖率 VDB。
-6. 不要提问；如果由于环境或需求不可执行，请在输出目录写一个 failure_report.md，并在最终回复说明阻塞点。
-7. 必须实际创建脚本文件或 failure_report.md；不能只回复计划、思路或下一步。
-8. 编译/预筛选必须调用对应 skill 的 CLI；不要绕过 skill 直接调用 friscv/gem5，也不要用管道、head、tail 截断验证命令，避免吞掉失败退出码。
+Follow the preconfigured generator prompt and the relevant skill instructions. This benchmark adds only one requirement:
+If the environment or requirements cannot be completed, write failure_report.md in the required output directory.
 
-最终回复必须包含：
-- 脚本路径
-- 编译结果
-- gem5 run_id 或 failure_report.md 路径
-- 关键证据
-- 仍然不足的点
+The final response must briefly include the script path, compilation result, gem5 run_id or failure_report.md path, key evidence, and any remaining gaps.
 EOF
 
   echo "==> $case_name: start $(utc_now)"
