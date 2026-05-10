@@ -32,6 +32,71 @@ self.initializeMemory(base_addr + 0, 0, 8, 0xA5A5A5A5A5A5A5A5, False, True)
 
 ---
 
+### 1.2 `writeRegister` 前必须先 `initializeRegister`
+
+**错误信息**：
+```
+[RegisterNotInitSetValue] name: x28 set-mask: 0xffffffffffffffff init-mask: 0x0 size-mask 0xffffffffffffffff
+RuntimeError in GenThreadExecutor.executeGenThread → GenThread.generate → Sequence.run → writeRegister
+```
+
+**原因**：`writeRegister` 用于在运行时修改寄存器值，但 FORCE-RISCV 要求目标寄存器在启动阶段已通过 `initializeRegister` 完成初始化。未初始化直接 write 会触发前端校验失败。
+
+**正确用法**：
+```python
+# 错误：直接 writeRegister
+self.writeRegister("x28", scratch_base + scratch_size)
+
+# 正确：先 initializeRegister（设置启动初始值）
+self.initializeRegister("x28", scratch_base + scratch_size)
+```
+
+**关键区别**：
+
+| API | 阶段 | 用途 |
+|-----|------|------|
+| `initializeRegister` | Boot / 启动初始化 | 设置寄存器启动时的初始值 |
+| `writeRegister` | 运行时 | 运行时修改寄存器值（必须先 initialize） |
+| `genInstruction` | 运行时 | 通过生成指令修改寄存器值（不受 initialize 限制） |
+
+**注意**：此错误发生在前端 Python 执行阶段，此时 ELF 尚未生成。与 §3.1 的 ISS 后失败不同。
+
+---
+
+### 1.3 `simm12` / `simm20` 立即数超出物理编码范围
+
+**错误信息**：
+```
+[fail]{OperandConstraint::ValidateUserRequestConstraint} requested operand value range (0x2710)
+for operand simm12 contains values outside of the physical range for the operand (0x0-0xfff)
+[FAIL]{illegal-operand-request} in file '../base/src/OperandConstraint.cc'
+```
+
+**原因**：`ADDI`、`BEQ` 等指令的 `simm12` 操作数只有 12 位，FORCE 后端的校验基于原始编码范围 `0x0–0xFFF`（即 0–4095）。其中 `0x800–0xFFF` 是负数的二补码编码。传入 `10000`（`0x2710`）等超出 12 位的值直接触发操作数约束失败。
+
+**受影响的指令及 operands**：
+
+| 指令类型 | operand 名 | 位宽 | 编码范围 | 有效符号范围 |
+|---------|-----------|------|---------|------------|
+| ADDI, BEQ, BNE, BLT, BGE, BLTU, BGEU, JALR, LD, SD | `simm12` | 12 bit | 0x0–0xFFF | -2048 ~ +2047 |
+| JAL, AUIPC, LUI | `simm20` | 20 bit | 0x0–0xFFFFF | -524288 ~ +524287 |
+
+**正确范围**：
+```python
+# ADDI 正立即数：0 ~ 2047
+self.genInstruction("ADDI##RISCV", {"rd": 5, "rs1": 0, "simm12": 1000})   # ✓
+
+# 超出范围的值
+self.genInstruction("ADDI##RISCV", {"rd": 20, "rs1": 0, "simm12": 10000})  # ✗ 0x2710 > 0xFFF
+
+# 负值：Python 传入负数，FORCE 自动编码
+self.genInstruction("BEQ##RISCV", {"rs1": 1, "rs2": 2, "simm12": -8})     # ✓ 编码为 0xFF8
+```
+
+**实践建议**：如果需要在代码中放置"标记值"或"路径签名"，使用 **1–2047** 之间的值即可满足绝大多数标记需求。需要更大值时，用多个 ADD/ADDI 组合构造（如 LUI + ADDI）。
+
+---
+
 ## 2. ISS 模拟错误
 
 ### 2.1 `M5EXIT` 在 ISS 中触发非法指令异常导致内存写入 crash
@@ -97,6 +162,115 @@ preferred return address 0x0
 
 ---
 
+### 2.3 `M5EXIT` ISS handler 使用的 scratch 寄存器因版本/配置而异
+
+**背景**：§2.1 记录 handler 使用 `x28`（t2），但实际排查中发现 handler 使用 `x13`（a3）。不同 FORCE-RISCV 版本或不同 `RISCV.config` 生成的 M-mode handler 可能使用不同的 scratch 寄存器。
+
+**症状 A — handler 用 x28**（§2.1 场景）：
+```
+mtvec = 0x20000
+0x20200: addi x28, x28, -8
+0x20204: sd   x1, 0(x28)
+```
+
+**症状 B — handler 用 x13**（case_009 实际场景）：
+```
+mtvec = 0x10000
+0x10000: j    pc + 0x200
+0x10200: addi x13, x13, -8
+0x10204: sd   x1, 0(x13)
+```
+
+**排查方法**：不要假设 handler 一定使用 x28。直接读 `sim.log` 定位崩溃的 handler 指令序列：
+```bash
+# 在 sim.log 中搜索 M5EXIT 之后的执行流
+grep -A 10 "custom3" sim.log  # M5EXIT 编码为 0x4200007b
+# 然后逐条跟踪 mtvec → handler，确认 addi 和 sd 使用的寄存器
+```
+
+**解决方案**：分两步同时保障 x13 和 x28：
+
+```python
+scratch_size = 0x200
+scratch_base = self.genVA(Size=scratch_size, Align=8, Type="D")
+for offs in range(0, scratch_size, 8):
+    self.initializeMemory(scratch_base + offs, 0, 8, 0xDEADBEEFDEADBEEF, False, True)
+
+# 同时为 x13 和 x28 分配 scratch（覆盖两套 handler 变体）
+self.initializeRegister("x13", scratch_base + scratch_size)
+self.initializeRegister("x28", scratch_base + scratch_size)
+```
+
+**额外风险**：如果用户脚本中使用 `x13` 或 `x28` 作为数据寄存器，handler 的 `addi` 指令会覆盖用户值。一旦 M5EXIT 触发前 x13/x28 被修改为小值或 0，handler 仍可能崩溃。实践中：
+- 如果用户代码不修改 x13/x28：`initializeRegister` 足以保障
+- 如果用户代码修改了 x13/x28：需在 M5EXIT 前通过 `genInstruction` 将其恢复为 scratch 地址
+
+**注意**：此问题仅在 FORCE-RISCV ISS 模拟时出现。gem5 将 M5EXIT 识别为合法退出指令，不触发异常 handler。
+
+---
+
+### 2.4 `systemCall` 特权级切换 + 显式 ECALL → ISS ReExe 死循环
+
+**错误信息**：
+```
+[fail]Instruction simulation limit : 262143 exceeded.
+[FAIL]{instruction-simulation-limit-exceeded} in file '../base/src/GenInstructionAgent.cc'
+```
+
+同时可在 stdout 中观察到重复的 ReExe 日志：
+```
+[notice]{GenInstructionAgent::ReExecute} exception in re-execution.
+[notice]{GenInstructionAgent::ReExecute} re-executed 0 instructions, try loop reconverge? 0
+[notice]{GenExceptionAgent::HandleException} exception ID 0x8, enter_m
+```
+
+**原因**：`systemCall({"PrivilegeLevel": level})` 内部通过 ECALL 实现特权级切换。当用户再显式调用 `ECALL##RISCV` 时，ISS 在第一个 ECALL 的异常 handler 返回后再度遭遇 ECALL，ReExe 机制无法收敛——每次 ReExe 尝试生成 0 条指令后再度触发异常，形成死循环直至击中 262143 条指令上限。
+
+**触发场景**：脚本中 `systemCall` 后紧跟显式 `ECALL##RISCV`（或其他会触发异常的指令如 `EBREAK`），ISS 在处理第一次系统调用返回后无法正确推进到显式异常指令。
+
+**缓解方法**：
+- 方案 A：放弃 `systemCall` 特权切换，所有异常在 M-mode 触发（不同异常类别仍能覆盖多类别需求）
+- 方案 B：仅使用 `MRET##RISCV` 做特权切换（需参考 §2.5 预先初始化 `mepc`）
+- 方案 C：在 `systemCall` 和显式异常指令之间插入足够多的 ALU 指令（≥5 条），降低 ISS ReExe 冲突概率
+
+**验证**：case_011 采用方案 A 通过编译，6 类异常均从 M-mode 触发。
+
+---
+
+### 2.5 `MRET##RISCV` 未初始化 `mepc` 时 gem5 跳转非法地址
+
+**错误信息**（gem5 output.log）：
+```
+Address 0x2891aa76b0c0 is outside of physical memory, stopping fetch
+```
+
+**原因**：`MRET##RISCV` 读取 `mepc` CSR 决定返回地址。FORCE-RISCV 框架在生成 `MRET##RISCV` 时**不会自动配置** `mepc` 或 `mstatus`。若脚本中没有显式写入这些 CSR，MRET 会使用随机值跳转到无效物理地址。
+
+**触发场景**：
+- 在 `gen_thread_initialization` 之外直接使用 `MRET##RISCV` 做特权级切换
+- 或在没有任何异常处理上下文（即 `mepc` 从未被写入）时使用 MRET
+
+**解决方案**：在 `MRET##RISCV` 之前用 CSR 指令配置 `mepc` 和 `mstatus`：
+
+```python
+# 用 LoadGPR64 加载目标地址
+load_gpr64_seq = LoadGPR64(self.genThread)
+load_gpr64_seq.load(scratch_reg, target_addr)
+
+# 写入 mepc（指定返回地址）
+self.genInstruction("CSRRW#register#RISCV", {
+    "rd": 0, "rs1": scratch_reg,
+    "csr": self.getRegisterIndex("mepc")
+})
+
+# 生成 MRET
+self.genInstruction("MRET##RISCV")
+```
+
+**注意**：此问题仅在 gem5 实际执行阶段出现。FORCE-RISCV ISS 可能在内部自动处理 mepc 配置，因此该错误不会在 `isg_compiler` 阶段暴露。
+
+---
+
 ## 3. 编译状态与 ELF 分离
 
 ### 3.1 `isg_compiler` 返回 `failed` 但 ELF 已生成
@@ -119,7 +293,10 @@ python3 .opencode/skills/gem5-prescreen/scripts/gem5_prescreener.py run \
   --artifact-path <output_dir>/m5out
 ```
 
-**注意事项**：若 ISS 在步骤 1 完成前崩溃（如语法错误、Python 异常），则 ELF 可能不完整。此情况通常伴随明显的 Python traceback。
+**注意事项**：
+- 若 ISS 在步骤 1 完成**之后**崩溃（M5EXIT 触发 §2.1/§2.3 的 handler crash），ELF 已完整生成，gem5 可直接执行
+- 若崩溃发生在步骤 1 完成**之前**（API 校验失败如 §1.2/§1.3、Python 异常），ELF 根本不会生成，`isg_compiler` 的 `elf_path` 为 null
+- 判断方法：检查 `isg_compiler` 输出 JSON 中 `elf_path` 是否为 null；非 null 则 ELF 已存在可继续 gem5
 
 ---
 
@@ -212,6 +389,32 @@ EXIT 在生成代码最末尾，taken 分支跳转到 boot 区时即使循环，
 
 ---
 
+### 5.4 C 扩展指令导致分支偏移量估算不准
+
+**现象**：通过 `simm12` 精确指定分支目标偏移量时，最终生成的目标地址与预期不符。
+
+**原因**：`riscv_rv64_c910.config` 同时加载 `c_instructions.xml`（RVC 压缩指令），框架可能在生成代码中插入 2 字节压缩指令。而脚本中的 `simm12` 偏移通常按 4 字节/指令估算，C 扩展使得实际字节偏移与 `simm12 << 1` 对应的指令数不再吻合。
+
+**表现**：
+- 预设 `simm12=12` 期望跳过 3 条指令（24 字节），但实际落点因中间混入 C 指令而偏移
+- Taken 分支可能跳入预期外代码块，not-taken 路径可能跳过关键的 reconverge 点
+
+**缓解方法**：
+1. **方案 A — 保守偏移**：使用较大 `simm12`（如 32）确保跳过目标 block，再用显式 `JAL` 调回 reconverge 点
+2. **方案 B — 放弃精确偏移**：分支方向完全由寄存器值驱动，不指定 `simm12`，由框架自动分配目标
+3. **方案 C — 用 JAL 替代分支做 block 切换**：JAL 无条件跳转更可控，条件分支仅用于创建 taken/not-taken 轨迹
+4. **方案 D — 非 C 配置**：使用不含 C 扩展的配置文件编译
+
+**推荐策略**（双层 fork/join 拓扑）：
+```
+条件分支 (positive simm12, 保守值) → JAL x0, larger_offset → 回汇点
+```
+用条件分支创建 fork，用 JAL 跳过另一条路径块。分支目标不需要精确命中，因为 JAL 负责最终的 reconverge 跳转。
+
+**验证**：case_009 采用此策略，31 条控制流指令构成的 6 阶段双层拓扑，在 gem5 中正常收敛退出（439 simInsts, 37 committed branches）。
+
+---
+
 ## 6. 指令名称错误
 
 ### 6.1 RV64I 指令需要 `form` 后缀
@@ -248,6 +451,36 @@ EXIT 在生成代码最末尾，taken 分支跳转到 boot 区时即使循环，
 - 配置 `riscv_rv64_c910.config` 同时加载 `g_instructions.xml`（RV32I）和 `g_instructions_rv64.xml`（RV64I）
 - 通用指令（ADDI、ADD、XOR、BEQ 等）在 RV32I 定义，使用 `##RISCV` 后缀
 - RV64 特有指令（ADDW、ADDIW、SLLIW 等）和带 form 的指令使用 `#RV64I#RISCV` 后缀
+
+### 6.2 CSR 寄存器名称查找失败
+
+**错误信息**：
+```
+[fail]Register lookup with name "mtime" not found.
+[FAIL]{register-look-up-by-name-fail} in file '../base/src/Register.cc' line 1943 func 'RegisterLookup'.
+```
+
+**原因**：`getRegisterIndex(name)` 依赖 FORCE-RISCV 后端的寄存器字典，部分逻辑概念上存在的 CSR 名称在实际字典中不可用。
+
+**已确认不可用**：
+
+| 名称 | 替代方案 | 说明 |
+|------|---------|------|
+| `mtime` | 无直接替代 | Memory-mapped timer，非标准 CSR 寄存器 |
+| `mtimecmp` | 无直接替代 | 同上 |
+
+**可靠可用的 CSR 名称**（已验证）：
+
+| 类别 | 可用名称 |
+|------|---------|
+| Machine Info | `misa`, `mstatus`, `mvendorid`, `marchid`, `mimpid`, `mhartid` |
+| Machine Trap | `mepc`, `mcause`, `mtval`, `mtvec`, `medeleg`, `mideleg` |
+| Machine Counter | `mcounteren`, `scounteren` |
+| Supervisor | `satp`, `stvec`, `sstatus`, `scause`, `sepc`, `stval` |
+
+**排查方法**：遇到 CSR 名称查找失败时，从已知可用的 CSF 列表中选择语义最接近的替代项。不可凭空推测名称，优先参考 `example/exception_handlers/access_csrs_force.py` 中已使用的 CSR 列表。
+
+**验证**：case_011 移除 `mtime` CSR 读取后编译通过。
 
 ---
 

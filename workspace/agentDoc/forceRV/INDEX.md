@@ -11,18 +11,12 @@
 | [apiDoc/](apiDoc/) | API 参考手册、RISC-V ISA 规范、架构介绍 | 需要 API 用法、函数签名、ISA 细节 |
 | [config/](config/) | XML 指令定义与架构配置 | 需要指令编码、操作数细节、架构配置 |
 | [example/](example/) | Python 测试模板示例（按功能组织） | 需要特定功能的代码示例 |
-| [memory_operations_guide.md](memory_operations_guide.md) | 内存操作独立指南 | load/store、地址生成、内存初始化 |
 
 ---
 
 ## 2. Progressive Loading Guide
 
-### Level 1 — 入门
-阅读 [FORCE-RISCV_brief_introduction.md](apiDoc/FORCE-RISCV_brief_introduction.md)：
-- 架构组件：Config / Arch / Memory / Virtual Memory / State Transition / Privilege Switch / Dependency / ReExe / Bnt
-- 程序执行流程：reset_pc → boot → template → end-of-test
-
-### Level 2 — API 参考（按需查阅）
+### Level 1 — API 参考（按需查阅）
 使用 [apiDoc/INDEX.md](apiDoc/INDEX.md) 在 User Manual 中定位章节：
 
 | 需求 | User Manual 章节 |
@@ -39,7 +33,7 @@
 | BNT 分支未遂 | §5.11 `setBntHook`, `revertBntHook` |
 | 工具函数 | §5.12 (`pickWeighted`, `sample`, `random32/64`, `genData` 等) |
 
-### Level 3 — RISC-V ISA 规范（按需查阅）
+### Level 2 — RISC-V ISA 规范（按需查阅）
 [apiDoc/RISC-V_Unprivileged_ISA.md](apiDoc/RISC-V_Unprivileged_ISA.md) 各扩展对应章节：
 
 | Extension | Chapters | 内容 |
@@ -54,6 +48,9 @@
 | V | Ch.31 | 向量扩展 |
 | Memory Model | Ch.18 | RVWMO 内存模型 |
 | CSR | Ch.6 | 控制状态寄存器 |
+
+### Level 3 — 常见错误排查（遇到问题再看）
+[SUB-ERROR.md](SUB-ERROR.md) 记录 ISG 脚本开发中的报错信息、根因与解决方案.
 
 ---
 
@@ -89,7 +86,7 @@
 
 ---
 
-## 4. Core API Index（高频 Topic）
+## 4. Core API Index
 
 ### 4.1 Memory Operations
 
@@ -297,4 +294,3 @@
 | Multiprocessing | Semaphore & Lock, Thread Context, Thread Group ×4 |
 | Vector | Vector Load/Store ×7, Vector Mask ×3, Vector Op Conflict ×3, Vector Scalar Move ×2, Vector Wide/FP, Vector AMO, Vector Coverage |
 | FP/Data/Framework | MUL/DIV/REM ×3, RandomUtils, Master Run, Inquiry APIs, Custom Entry Point, RV32I Base |
-| Error Debugging | SUB-ERROR.md — ISG 开发中踩过的坑与排查方法 |
