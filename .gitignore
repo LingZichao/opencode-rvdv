@@ -10,6 +10,7 @@ opencode.jsonc
 logs/
 fsdbdebugLog/
 *.log
+npiLog/
 
 # 覆盖率任务数据（可选提交）
 coverageDB/tasks/
