@@ -34,6 +34,7 @@ Usage:
 
 import os
 import time
+import json
 
 import numpy as np
 
@@ -369,6 +370,71 @@ def compute_stage_timing(result, match_idx):
     return timing
 
 
+def _json_value(val):
+    """Convert numpy scalar capture values to JSON-friendly Python values."""
+    if val is None:
+        return None
+    if isinstance(val, np.generic):
+        return val.item()
+    if isinstance(val, list):
+        return [_json_value(v) for v in val]
+    try:
+        return int(val)
+    except (TypeError, ValueError, OverflowError):
+        return str(val)
+
+
+def build_match_record(result, i, slot):
+    """Build one flattened match record with slot kept as metadata."""
+    stage_timing = compute_stage_timing(result, i)
+    return {
+        "id": None,
+        "entry_slot": slot,
+        "local_match_id": i,
+        "start_cycle": int(result.start.value[i]),
+        "end_cycle": int(result.end.value[i]),
+        "duration": int(result.duration.value[i]),
+        "status": MatchStatus(result.status.value[i]).name,
+        "captures": {
+            name: _json_value(wf.value[i])
+            for name, wf in result.captures.items()
+        },
+        "stage_timing": stage_timing,
+    }
+
+
+def sort_match_key(match):
+    """Sort by traced entry point first, then slot for deterministic ties."""
+    entry_cycle = match["captures"].get("cycle_pcgen_ib")
+    if entry_cycle is None:
+        entry_cycle = match["start_cycle"]
+    return (int(entry_cycle), match["entry_slot"], match["local_match_id"])
+
+
+def compute_flat_stage_stats(matches):
+    """Compute stage timing statistics across all flattened OK matches."""
+    stats = {}
+    ok_matches = [m for m in matches if m["status"] == "OK"]
+    for stage in STAGE_ORDER:
+        rows = [
+            t for m in ok_matches for t in m["stage_timing"]
+            if t["stage"] == stage
+        ]
+        if not rows:
+            continue
+        cycles = [int(t["cycle"]) for t in rows]
+        deltas = [int(t["delta"]) for t in rows]
+        stats[stage] = {
+            "cycle_avg": sum(cycles) / len(cycles),
+            "cycle_min": min(cycles),
+            "cycle_max": max(cycles),
+            "delta_avg": sum(deltas) / len(deltas),
+            "delta_min": min(deltas),
+            "delta_max": max(deltas),
+        }
+    return stats
+
+
 def format_match(result, i, slot):
     """Format a single match for text output with per-stage timing."""
     status = MatchStatus(result.status.value[i]).name
@@ -393,6 +459,35 @@ def format_match(result, i, slot):
             continue
         val = wf.value[i]
         lines.append(f"    {name} = 0x{int(val):x}")
+    return "\n".join(lines)
+
+
+def format_flat_match(match):
+    """Format one flattened match for text output."""
+    lines = [
+        f"  Match #{match['id']} [{match['status']}]"
+        f"  slot={match['entry_slot']} local={match['local_match_id']}"
+        f"  cycles {match['start_cycle']}->{match['end_cycle']}"
+        f"  dur={match['duration']}"
+    ]
+
+    if match["stage_timing"]:
+        items = [
+            f"{st['stage']}={st['cycle']}(+{st['delta']})"
+            for st in match["stage_timing"]
+        ]
+        lines.append("    Stage timing (cycle / delta):")
+        lines.append("      " + " | ".join(items))
+
+    for name, val in match["captures"].items():
+        if name.startswith("cycle_"):
+            continue
+        if val is None:
+            continue
+        if isinstance(val, int):
+            lines.append(f"    {name} = 0x{val:x}")
+        else:
+            lines.append(f"    {name} = {val}")
     return "\n".join(lines)
 
 
@@ -425,86 +520,66 @@ def main():
 
         all_results[label] = result
 
-    # Save reports
+    # Save flattened reports
     os.makedirs(OUTPUT, exist_ok=True)
-    import json
 
+    matches = []
     for label, result in all_results.items():
-        # JSON
-        matches = []
+        slot = int(label[-1])
         for i in range(len(result.start.value)):
-            caps = {name: str(wf.value[i]) for name, wf in result.captures.items()}
-            stage_timing = compute_stage_timing(result, i)
-            matches.append({
-                "id": i,
-                "start_cycle": int(result.start.value[i]),
-                "end_cycle": int(result.end.value[i]),
-                "duration": int(result.duration.value[i]),
-                "status": MatchStatus(result.status.value[i]).name,
-                "captures": caps,
-                "stage_timing": stage_timing,
-            })
-        with open(f"{OUTPUT}/{label}.json", "w", encoding="utf-8") as f:
-            json.dump({"trace_name": label, "matches": matches}, f, indent=2)
+            matches.append(build_match_record(result, i, slot))
 
-        # Text summary
-        ok = int(np.sum(result.status.value == MatchStatus.OK))
-        to = int(np.sum(result.status.value == MatchStatus.TIMEOUT))
-        rv = int(np.sum(result.status.value == MatchStatus.REQUIRE_VIOLATED))
-        ok_idx = np.where(result.status.value == MatchStatus.OK)[0]
+    matches.sort(key=sort_match_key)
+    for i, match in enumerate(matches):
+        match["id"] = i
 
-        # Stage timing statistics (across all OK matches)
-        stage_stats = {}
-        if len(ok_idx) > 0:
-            for stage in STAGE_ORDER:
-                key = f"cycle_{stage}"
-                if key not in result.captures:
-                    continue
-                cycles = [int(result.captures[key].value[j]) for j in ok_idx
-                          if result.captures[key].value[j] is not None]
-                if not cycles:
-                    continue
-                # Delta from previous stage
-                prev_key = f"cycle_{STAGE_ORDER[STAGE_ORDER.index(stage) - 1]}" if STAGE_ORDER.index(stage) > 0 else None
-                if prev_key and prev_key in result.captures:
-                    deltas = [int(result.captures[key].value[j]) - int(result.captures[prev_key].value[j])
-                              for j in ok_idx
-                              if result.captures[key].value[j] is not None
-                              and result.captures[prev_key].value[j] is not None]
-                else:
-                    deltas = [0] * len(cycles)
-                stage_stats[stage] = {
-                    "cycle_avg": sum(cycles) / len(cycles),
-                    "cycle_min": min(cycles),
-                    "cycle_max": max(cycles),
-                    "delta_avg": sum(deltas) / len(deltas),
-                    "delta_min": min(deltas),
-                    "delta_max": max(deltas),
-                }
+    status_counts = {
+        status.name: sum(1 for m in matches if m["status"] == status.name)
+        for status in MatchStatus
+    }
+    stage_stats = compute_flat_stage_stats(matches)
 
-        lines = [
-            f"Trace: {label}",
-            f"  Stages: pcgen -> ifu_ib -> id_decode -> ir_rename -> rob_alloc",
-            f"          -> is_aiq0 -> rf_pipe0 -> rf_decode -> iu_recv",
-            f"          -> iu_cmplt -> rtu_commit -> rtu_retire",
-            f"  Results: {len(result.start.value)} total",
-            f"    OK: {ok}, TIMEOUT: {to}, REQUIRE_VIOLATED: {rv}",
-            "",
-        ]
-        if stage_stats:
-            lines.append("  Stage timing summary (cycle [min..max] / delta [min..max]):")
-            for stage, stats in stage_stats.items():
-                lines.append(
-                    f"    {stage:14s}  cy={stats['cycle_avg']:6.1f} [{stats['cycle_min']}..{stats['cycle_max']}]"
-                    f"  d={stats['delta_avg']:5.1f} [{stats['delta_min']}..{stats['delta_max']}]"
-                )
-            lines.append("")
-        for j in ok_idx[:10]:
-            lines.append(format_match(result, j, int(label[-1])))
-            lines.append("")
-        with open(f"{OUTPUT}/{label}.txt", "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
-        print(f"[INFO] Saved {OUTPUT}/{label}.json and .txt")
+    trace = {
+        "trace_name": "openc910_inst_lifecycle",
+        "layout": "flattened_by_entry_cycle",
+        "slots": 3,
+        "start_cycle": 0,
+        "end_cycle": END_CYCLE,
+        "status_counts": status_counts,
+        "stage_stats": stage_stats,
+        "matches": matches,
+    }
+    with open(f"{OUTPUT}/inst_trace.json", "w", encoding="utf-8") as f:
+        json.dump(trace, f, indent=2)
+
+    lines = [
+        "Trace: openc910_inst_lifecycle",
+        "  Layout: flattened by cycle_pcgen_ib, entry_slot only kept as metadata",
+        "  Stages: pcgen -> ifu_ib -> id_decode -> ir_rename -> rob_alloc",
+        "          -> is_aiq0 -> rf_pipe0 -> rf_decode -> iu_recv",
+        "          -> iu_cmplt -> rtu_commit -> rtu_retire",
+        f"  Results: {len(matches)} total",
+        f"    OK: {status_counts['OK']}, TIMEOUT: {status_counts['TIMEOUT']}, "
+        f"REQUIRE_VIOLATED: {status_counts['REQUIRE_VIOLATED']}",
+        "",
+    ]
+    if stage_stats:
+        lines.append("  Stage timing summary (cycle [min..max] / delta [min..max]):")
+        for stage, stats in stage_stats.items():
+            lines.append(
+                f"    {stage:14s}  cy={stats['cycle_avg']:6.1f} [{stats['cycle_min']}..{stats['cycle_max']}]"
+                f"  d={stats['delta_avg']:5.1f} [{stats['delta_min']}..{stats['delta_max']}]"
+            )
+        lines.append("")
+
+    ok_matches = [m for m in matches if m["status"] == "OK"]
+    for match in ok_matches:
+        lines.append(format_flat_match(match))
+        lines.append("")
+
+    with open(f"{OUTPUT}/inst_trace.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"[INFO] Saved {OUTPUT}/inst_trace.json and inst_trace.txt")
 
     reader.close()
     print("\n[INFO] Done.")
