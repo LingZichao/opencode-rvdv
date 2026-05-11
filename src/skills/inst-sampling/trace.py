@@ -38,8 +38,7 @@ import json
 
 import numpy as np
 
-from wavekit import FsdbReader
-from wavekit.pattern import Pattern, MatchStatus
+from wavekit import FsdbReader, MatchStatus, Pattern
 
 FSDB = "/home/c910/openc910/smart_run/work_force/novas.fsdb"
 CLOCK = "tb.clk"
@@ -219,44 +218,68 @@ def build_trace(reader, slot: int) -> Pattern:
                 or int(inst_pc[slot].value[idx]) != int(inst_pc[slot].value[idx - 1]))
 
     pat.wait(trigger_ib)
-    pat.capture(f"ifu_ib.inst{slot}", inst_data[slot])
+    pat.capture("ifu_ib.inst", inst_data[slot])
     pat.capture("ifu_ib.pc15", inst_pc[slot])
     pat.capture("pcgen.pc", pcgen_pc)
     pat.capture("pcgen.vpc", vpc_wf)
     pat.capture("cycle_pcgen_ib", cycle_cnt)
 
+    def _selected_value(waves, lane_key):
+        def capture_selected(idx, caps):
+            lane = int(caps[lane_key])
+            return int(waves[lane].value[idx]) if lane >= 0 else -1
+        return capture_selected
+
     # ---- Stage 2: IDU ID decode (3-wide, cross-pipe match) ----
-    def wait_id_decode(idx, caps):
-        inst = caps[f"ifu_ib.inst{slot}"]
+    def _id_match_lane(idx, caps):
+        inst = caps["ifu_ib.inst"]
         pc15 = caps["ifu_ib.pc15"]
-        return any(int(id_vld[i].value[idx]) != 0 and int(id_data[i].value[idx]) == inst
-                   and int(id_pc[i].value[idx]) == pc15
-                   for i in range(3))
+        for i in range(3):
+            if (int(id_vld[i].value[idx]) != 0
+                    and int(id_data[i].value[idx]) == inst
+                    and int(id_pc[i].value[idx]) == pc15):
+                return i
+        return -1
+
+    def wait_id_decode(idx, caps):
+        return _id_match_lane(idx, caps) >= 0
     pat.wait(wait_id_decode, guard=flush_ok)
-    pat.capture("id_decode.id0", id_data[0])
-    pat.capture("id_decode.pc0", id_pc[0])
-    pat.capture("id_decode.id1", id_data[1])
-    pat.capture("id_decode.pc1", id_pc[1])
-    pat.capture("id_decode.id2", id_data[2])
-    pat.capture("id_decode.pc2", id_pc[2])
+    pat.capture("id_decode.lane", _id_match_lane)
+    pat.capture("id_decode.inst", _selected_value(id_data, "id_decode.lane"))
+    pat.capture("id_decode.pc15", _selected_value(id_pc, "id_decode.lane"))
     pat.capture("cycle_id_decode", cycle_cnt)
 
     # ---- Stage 3: IDU IR rename (4-wide after 3→4 expansion, cross-pipe) ----
+    def _ir_match_lane(idx, caps):
+        inst = caps["id_decode.inst"]
+        pc15 = caps["id_decode.pc15"]
+        for i in range(4):
+            if (int(ir_vld[i].value[idx]) != 0
+                    and int(ir_data[i].value[idx]) == inst
+                    and int(ir_pc[i].value[idx]) == pc15):
+                return i
+        return -1
+
     def wait_ir_rename(idx, caps):
-        id_words = [caps[f"id_decode.id{i}"] for i in range(3)]
-        pc15 = caps["ifu_ib.pc15"]
-        return any(int(ir_vld[i].value[idx]) != 0
-                   and int(ir_data[i].value[idx]) in id_words
-                   and int(ir_pc[i].value[idx]) == pc15
-                   for i in range(4))
+        return _ir_match_lane(idx, caps) >= 0
     pat.wait(wait_ir_rename, guard=flush_ok)
-    for i in range(4):
-        pat.capture(f"ir_rename.ir{i}", ir_data[i])
-        pat.capture(f"ir_rename.pc{i}", ir_pc[i])
+    pat.capture("ir_rename.lane", _ir_match_lane)
+    pat.capture("ir_rename.inst", _selected_value(ir_data, "ir_rename.lane"))
+    pat.capture("ir_rename.pc15", _selected_value(ir_pc, "ir_rename.lane"))
     pat.capture("cycle_ir_rename", cycle_cnt)
 
+    def _is_match_lane(idx, caps):
+        inst = caps["ir_rename.inst"]
+        pc15 = caps["ir_rename.pc15"]
+        for i in range(4):
+            if (int(is_vld[i].value[idx]) != 0
+                    and int(is_data[i].value[idx]) == inst
+                    and int(is_pc[i].value[idx]) == pc15):
+                return i
+        return -1
+
     def _aiq0_match_port(idx, caps):
-        inst = caps[f"ifu_ib.inst{slot}"]
+        inst = caps["ifu_ib.inst"]
         pc15 = caps["ifu_ib.pc15"]
         if int(aiq_ens[0][0].value[idx]) != 0:
             if int(aiq0_c0_data.value[idx]) == inst and int(aiq0_c0_pc.value[idx]) == pc15:
@@ -294,30 +317,24 @@ def build_trace(reader, slot: int) -> Pattern:
     # ---- Stage 4+5: ROB allocate + AIQ0 create ----
     # These happen in the same cycle, so keep them in one blocking wait.
     def wait_is_dispatch(idx, caps):
-        inst = caps[f"ifu_ib.inst{slot}"]
-        pc15 = caps["ifu_ib.pc15"]
-        target_in_is = any(int(is_vld[i].value[idx]) != 0
-                           and int(is_data[i].value[idx]) == inst
-                           and int(is_pc[i].value[idx]) == pc15
-                           for i in range(4))
-        return (target_in_is
+        return (_is_match_lane(idx, caps) >= 0
                 and any(int(rob_creates[i].value[idx]) != 0 for i in range(4))
                 and aiq0_matches(idx, caps))
+
+    def _rob_create_mask(idx, _caps):
+        mask = 0
+        for i in range(4):
+            mask |= (int(rob_creates[i].value[idx]) != 0) << i
+        return mask
+
     pat.wait(wait_is_dispatch, guard=flush_ok)
-    for i in range(4):
-        pat.capture(f"rob_alloc.iid{i}", rob_iids[i])
-        pat.capture(f"rob_alloc.create{i}_en", rob_creates[i])
-        pat.capture(f"is_stage.inst{i}", is_data[i])
-        pat.capture(f"is_stage.pc{i}", is_pc[i])
+    pat.capture("is_stage.lane", _is_match_lane)
+    pat.capture("is_stage.inst", _selected_value(is_data, "is_stage.lane"))
+    pat.capture("is_stage.pc15", _selected_value(is_pc, "is_stage.lane"))
+    pat.capture("rob_alloc.create_mask", _rob_create_mask)
+    pat.capture("rob_alloc.iid", _aiq0_match_iid)
     pat.capture("cycle_rob_alloc", cycle_cnt)
-    # Capture both AIQ create port IIDs for reference
-    # The correct one will be matched at the RF stage
-    pat.capture("aiq.a0c0_iid", aiq_iids[0][0])
-    pat.capture("aiq.a0c0_data", aiq0_c0_data)
-    pat.capture("aiq.a0c0_pc15", aiq0_c0_pc)
-    pat.capture("aiq.a0c1_iid", aiq_iids[0][1])
-    pat.capture("aiq.a0c1_data", aiq0_c1_data)
-    pat.capture("aiq.a0c1_pc15", aiq0_c1_pc)
+    pat.capture("aiq.queue", lambda _idx, _caps: 0)
     pat.capture("aiq.port", _aiq0_match_port)
     pat.capture("aiq.iid", _aiq0_match_iid)
     pat.capture("aiq.opcode", _aiq0_match_opcode)
@@ -390,22 +407,40 @@ def build_trace(reader, slot: int) -> Pattern:
     # Commit and architectural retire can appear in the same sampled cycle.
     def wait_rtu_commit_retire(idx, caps):
         return _commit_matches(idx, caps) >= 0 and _retire_matches(idx, caps) >= 0
+
+    def _commit_iid(idx, caps):
+        commit_slot = _commit_matches(idx, caps)
+        return int(commit_iids[commit_slot].value[idx]) if commit_slot >= 0 else -1
+
+    def _retire_iid(idx, caps):
+        retire_slot = _retire_matches(idx, caps)
+        return int(retire_iids[retire_slot].value[idx]) if retire_slot >= 0 else -1
+
+    def _retire_entry_pc(idx, caps):
+        retire_slot = _retire_matches(idx, caps)
+        return int(retire_pcs[retire_slot].value[idx]) if retire_slot >= 0 else -1
+
+    def _retire_entry_pc15(idx, caps):
+        entry_pc = _retire_entry_pc(idx, caps)
+        return (entry_pc >> 1) & 0x7fff if entry_pc >= 0 else -1
+
+    def _retire_target_pc(_idx, caps):
+        return int(caps["ifu_ib.pc15"]) << 1
+
+    def _retire_target_offset(idx, caps):
+        entry_pc15 = _retire_entry_pc15(idx, caps)
+        return int(caps["ifu_ib.pc15"]) - entry_pc15 if entry_pc15 >= 0 else -1
+
     pat.wait(wait_rtu_commit_retire, guard=flush_ok)
-    for i in range(3):
-        pat.capture(f"rtu_commit.commit{i}_iid", commit_iids[i])
-        pat.capture(f"rtu_retire.retire{i}_iid", retire_iids[i])
-        pat.capture(f"rtu_retire.retire{i}_pc", retire_pcs[i])
     pat.capture("rtu_commit.slot", _commit_matches)
+    pat.capture("rtu_commit.iid", _commit_iid)
     pat.capture("cycle_rtu_commit", cycle_cnt)
     pat.capture("rtu_retire.slot", _retire_matches)
-    pat.capture(
-        "rtu_retire.pc",
-        lambda idx, caps: int(retire_pcs[_retire_matches(idx, caps)].value[idx]),
-    )
-    pat.capture(
-        "rtu_retire.pc15",
-        lambda idx, caps: (int(retire_pcs[_retire_matches(idx, caps)].value[idx]) >> 1) & 0x7fff,
-    )
+    pat.capture("rtu_retire.iid", _retire_iid)
+    pat.capture("rtu_retire.entry_pc", _retire_entry_pc)
+    pat.capture("rtu_retire.entry_pc15", _retire_entry_pc15)
+    pat.capture("rtu_retire.target_pc", _retire_target_pc)
+    pat.capture("rtu_retire.target_offset_pc15", _retire_target_offset)
     pat.capture("cycle_rtu_retire", cycle_cnt)
 
     pat.timeout(TIMEOUT)
@@ -567,33 +602,33 @@ def format_flat_match(match):
 
 
 def main():
-    reader = FsdbReader(FSDB)
-    print(f"[INFO] Opened {FSDB}")
+    with FsdbReader(FSDB) as reader:
+        print(f"[INFO] Opened {FSDB}")
 
-    all_results = {}
-    for slot in range(3):
-        label = f"inst{slot}"
-        print(f"\n[INFO] Building trace: {label}")
-        pat = build_trace(reader, slot)
+        all_results = {}
+        for slot in range(3):
+            label = f"inst{slot}"
+            print(f"\n[INFO] Building trace: {label}")
+            pat = build_trace(reader, slot)
 
-        print(f"[INFO] Running trace: {label} (cycles 0-{END_CYCLE})...")
-        start = time.time()
-        result = pat.match(start_cycle=0, end_cycle=END_CYCLE)
-        elapsed = time.time() - start
+            print(f"[INFO] Running trace: {label} (cycles 0-{END_CYCLE})...")
+            start = time.time()
+            result = pat.match(start_cycle=0, end_cycle=END_CYCLE)
+            elapsed = time.time() - start
 
-        ok = int(np.sum(result.status.value == MatchStatus.OK))
-        to = int(np.sum(result.status.value == MatchStatus.TIMEOUT))
-        rv = int(np.sum(result.status.value == MatchStatus.REQUIRE_VIOLATED))
-        print(f"[INFO] {label}: {len(result.start.value)} matches"
-              f" (OK={ok} TIMEOUT={to} REQ_VIOL={rv})"
-              f" in {elapsed:.1f}s")
+            ok = int(np.sum(result.status.value == MatchStatus.OK))
+            to = int(np.sum(result.status.value == MatchStatus.TIMEOUT))
+            rv = int(np.sum(result.status.value == MatchStatus.REQUIRE_VIOLATED))
+            print(f"[INFO] {label}: {len(result.start.value)} matches"
+                  f" (OK={ok} TIMEOUT={to} REQ_VIOL={rv})"
+                  f" in {elapsed:.1f}s")
 
-        # Print first few OK matches
-        ok_idx = np.where(result.status.value == MatchStatus.OK)[0]
-        for j in ok_idx[:3]:
-            print(format_match(result, j, slot))
+            # Print first few OK matches
+            ok_idx = np.where(result.status.value == MatchStatus.OK)[0]
+            for j in ok_idx[:3]:
+                print(format_match(result, j, slot))
 
-        all_results[label] = result
+            all_results[label] = result
 
     # Save flattened reports
     os.makedirs(OUTPUT, exist_ok=True)
@@ -667,7 +702,6 @@ def main():
         f.write("\n".join(lines))
     print(f"[INFO] Saved {OUTPUT}/inst_trace.json and inst_trace.txt")
 
-    reader.close()
     print("\n[INFO] Done.")
 
 
