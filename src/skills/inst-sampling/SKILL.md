@@ -6,7 +6,7 @@ compatibility: opencode
 
 # Inst Sampling
 
-Trace instruction pipeline events in the C910 core's FSDB waveforms.
+Build task-specific wave sampling scripts that trace instruction events through the C910 pipeline using wavekit's `Pattern` engine.
 
 ## Project Defaults
 
@@ -25,6 +25,6 @@ SCOPE = "tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_
 
 See the `wavekit` skill for full Pattern API, waveform operations, and viewer usage.
 
-## Example
+## Reference Script
 
-See [trace.py](trace.py) — traces 3 instruction slots through 11 pipeline stages (IFU → IDU decode → IR rename → ROB → AIQ0 → RF → IU → RTU commit → RTU retire) in ~10s.
+[trace.py](trace.py) is a complete 11-stage lifecycle trace — use it as a skeleton, not a template to copy. Each verification task needs its own tailored script.
