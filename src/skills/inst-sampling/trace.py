@@ -35,6 +35,8 @@ Usage:
 import os
 import time
 
+import numpy as np
+
 from wavekit import FsdbReader
 from wavekit.pattern import Pattern, MatchStatus
 
@@ -47,6 +49,22 @@ SCOPE = (
 OUTPUT = "workspace/instTraces/openc910_inst_lifecycle/report"
 TIMEOUT = 500
 END_CYCLE = 5000
+
+# Pipeline stage order for per-stage timing
+# Each stage name matches the cycle_<name> capture key suffix
+STAGE_ORDER = [
+    "pcgen_ib",    # PCGEN + IFU IB trigger
+    "id_decode",   # IDU ID decode
+    "ir_rename",   # IDU IR rename / expansion
+    "rob_alloc",   # ROB entry allocation
+    "aiq_create",  # AIQ entry creation
+    "rf_issue",    # RF pipe0 issue
+    "rf_decode",   # RF pipe0 decode
+    "iu_exec",     # IU pipe0 receive
+    "iu_cmplt",    # IU pipe0 complete
+    "rtu_commit",  # RTU commit
+    "rtu_retire",  # RTU retire
+]
 
 
 def _s(name: str) -> str:
@@ -137,28 +155,23 @@ def build_trace(reader, slot: int) -> Pattern:
     rob_retire_iid = _load(reader, "x_ct_rtu_top.rob_retire_inst0_iid[6:0]")
 
     # ---- Flush guard ----
-    flush_wf = reader.eval(
-        f"({_s('rtu_yy_xx_flush')} != 0)"
-        f" or ({_s('x_ct_ifu_top.rtu_ifu_flush')} != 0)"
-        f" or ({_s('x_ct_idu_top.rtu_idu_flush_fe')} != 0)"
-        f" or ({_s('x_ct_idu_top.rtu_idu_flush_is')} != 0)",
+    # While an instruction is in-flight, any flush invalidates this trace
+    # instance instead of letting it keep waiting and potentially reconnect
+    # to a later instruction with the same word/IID.
+    flush_ok = reader.eval(
+        f"({_s('rtu_yy_xx_flush')} == 0)"
+        f" and ({_s('x_ct_ifu_top.rtu_ifu_flush')} == 0)"
+        f" and ({_s('x_ct_idu_top.rtu_idu_flush_fe')} == 0)"
+        f" and ({_s('x_ct_idu_top.rtu_idu_flush_is')} == 0)",
         clock=CLOCK, sample_on_posedge=True,
     )
 
-    def no_flush(idx):
-        return int(flush_wf.value[idx]) == 0
-
-    def safe(fn):
-        """Wrap a wait callable: flush-active cycles return False (keep waiting)."""
-        def wrapped(idx, caps):
-            return no_flush(idx) and fn(idx, caps)
-        return wrapped
-
-    def safe_wf(wf):
-        """Waveform wait: flush-active cycles return False."""
-        def wrapped(idx, caps):
-            return no_flush(idx) and int(wf.value[idx]) != 0
-        return wrapped
+    # ---- Synthetic cycle counter for per-stage timing ----
+    # Use vectorized_map to create a waveform whose value == cycle index.
+    # Since we sample on posedge from start_cycle=0, value[i] == absolute cycle.
+    cycle_cnt = pcgen_pc.vectorized_map(
+        lambda v: np.arange(len(v), dtype=np.int64), width=64, signed=False,
+    )
 
     # ================================================================
     #  Build Pattern
@@ -178,21 +191,27 @@ def build_trace(reader, slot: int) -> Pattern:
         f"({_s('x_ct_ifu_top.ifu_idu_ib_inst')}{slot}_vld != 0)"
         f" and ({_s('x_ct_idu_top.idu_ifu_id_stall')} == 0)"
         f" and ({_s('x_ct_ifu_top.ifdp_ipdp_vpc')} != 0)"
+        f" and ({_s('rtu_yy_xx_flush')} == 0)"
+        f" and ({_s('x_ct_ifu_top.rtu_ifu_flush')} == 0)"
+        f" and ({_s('x_ct_idu_top.rtu_idu_flush_fe')} == 0)"
+        f" and ({_s('x_ct_idu_top.rtu_idu_flush_is')} == 0)"
     )
-    pat.wait(safe_wf(reader.eval(trigger_expr, clock=CLOCK, sample_on_posedge=True)))
+    pat.wait(reader.eval(trigger_expr, clock=CLOCK, sample_on_posedge=True))
     pat.capture(f"ifu_ib.inst{slot}", inst_data[slot])
     pat.capture("pcgen.pc", pcgen_pc)
     pat.capture("pcgen.vpc", vpc_wf)
+    pat.capture("cycle_pcgen_ib", cycle_cnt)
 
     # ---- Stage 2: IDU ID decode (3-wide, cross-pipe match) ----
     def wait_id_decode(idx, caps):
         inst = caps[f"ifu_ib.inst{slot}"]
         return any(int(id_vld[i].value[idx]) != 0 and int(id_data[i].value[idx]) == inst
                    for i in range(3))
-    pat.wait(safe(wait_id_decode))
+    pat.wait(wait_id_decode, guard=flush_ok)
     pat.capture("id_decode.id0", id_data[0])
     pat.capture("id_decode.id1", id_data[1])
     pat.capture("id_decode.id2", id_data[2])
+    pat.capture("cycle_id_decode", cycle_cnt)
 
     # ---- Stage 3: IDU IR rename (4-wide after 3→4 expansion, cross-pipe) ----
     def wait_ir_rename(idx, caps):
@@ -200,18 +219,20 @@ def build_trace(reader, slot: int) -> Pattern:
         return any(int(ir_vld[i].value[idx]) != 0
                    and int(ir_data[i].value[idx]) in id_words
                    for i in range(4))
-    pat.wait(safe(wait_ir_rename))
+    pat.wait(wait_ir_rename, guard=flush_ok)
     for i in range(4):
         pat.capture(f"ir_rename.ir{i}", ir_data[i])
+    pat.capture("cycle_ir_rename", cycle_cnt)
 
     # ---- Stage 4: ROB allocate (4 create ports) ----
     # Wait for at least one ROB create to happen; capture IIDs for context.
     def wait_rob_alloc(idx, caps):
         return any(int(rob_creates[i].value[idx]) != 0 for i in range(4))
-    pat.wait(safe(wait_rob_alloc))
+    pat.wait(wait_rob_alloc, guard=flush_ok)
     for i in range(4):
         pat.capture(f"rob_alloc.iid{i}", rob_iids[i])
         pat.capture(f"rob_alloc.create{i}_en", rob_creates[i])
+    pat.capture("cycle_rob_alloc", cycle_cnt)
 
     # ---- Stage 5: IS AIQ0 create with instruction-word disambiguation ----
     # Key fix: we match the AIQ entry by its instruction word
@@ -238,13 +259,14 @@ def build_trace(reader, slot: int) -> Pattern:
             if int(aiq0_c1_data.value[idx]) == inst:
                 return True
         return False
-    pat.wait(safe(wait_aiq0))
+    pat.wait(wait_aiq0, guard=flush_ok)
     # Capture both AIQ create port IIDs for reference
     # The correct one will be matched at the RF stage
     pat.capture("aiq.a0c0_iid", aiq_iids[0][0])
     pat.capture("aiq.a0c0_data", aiq0_c0_data)
     pat.capture("aiq.a0c1_iid", aiq_iids[0][1])
     pat.capture("aiq.a0c1_data", aiq0_c1_data)
+    pat.capture("cycle_aiq_create", cycle_cnt)
 
     # ---- Stage 6: RF pipe0 launch ----
     # Match RF pipe0 IID against AIQ IIDs (not ROB IIDs).
@@ -259,18 +281,20 @@ def build_trace(reader, slot: int) -> Pattern:
         # Match against AIQ0 create0 and create1 IIDs
         return (pipe0_iid == caps.get("aiq.a0c0_iid", -1)
                 or pipe0_iid == caps.get("aiq.a0c1_iid", -1))
-    pat.wait(safe(wait_rf_pipe0))
+    pat.wait(wait_rf_pipe0, guard=flush_ok)
     pat.capture("rf_pipe0.iid", rf_iid)
     pat.capture("rf_pipe0.func", rf_func)
     pat.capture("rf_pipe0.dst_preg", rf_dst)
+    pat.capture("cycle_rf_issue", cycle_cnt)
 
     # ---- Stage 7: RF pipe0 decode ----
     def wait_rf_decode(idx, caps):
         return (int(rf_iid.value[idx]) == caps["rf_pipe0.iid"]
                 and int(decd_func.value[idx]) == caps["rf_pipe0.func"]
                 and int(decd_expt.value[idx]) == 0)
-    pat.wait(safe(wait_rf_decode))
+    pat.wait(wait_rf_decode, guard=flush_ok)
     pat.capture("rf_decode.iid", rf_iid)
+    pat.capture("cycle_rf_decode", cycle_cnt)
 
     # ---- Stage 8: IU pipe0 receive ----
     def wait_iu_recv(idx, caps):
@@ -278,9 +302,10 @@ def build_trace(reader, slot: int) -> Pattern:
                 and int(iu_iid.value[idx]) == caps["rf_decode.iid"]
                 and int(iu_func.value[idx]) == caps["rf_pipe0.func"]
                 and int(iu_dst.value[idx]) == caps["rf_pipe0.dst_preg"])
-    pat.wait(safe(wait_iu_recv))
+    pat.wait(wait_iu_recv, guard=flush_ok)
     pat.capture("iu_recv.iid", iu_iid)
     pat.capture("iu_recv.dst_preg", iu_dst)
+    pat.capture("cycle_iu_exec", cycle_cnt)
 
     # ---- Stage 9: IU pipe0 complete ----
     def wait_iu_cmplt(idx, caps):
@@ -288,8 +313,9 @@ def build_trace(reader, slot: int) -> Pattern:
                 and int(alu_preg.value[idx]) == caps["iu_recv.dst_preg"]
                 and int(cbus_cmplt.value[idx]) != 0
                 and int(cbus_iid.value[idx]) == caps["iu_recv.iid"])
-    pat.wait(safe(wait_iu_cmplt))
+    pat.wait(wait_iu_cmplt, guard=flush_ok)
     pat.capture("iu_cmplt.rt_iid", rt_iid)
+    pat.capture("cycle_iu_cmplt", cycle_cnt)
 
     # ---- Stage 10: RTU commit (3 commit slots) ----
     # Match rt_iid (from IU completion) against our confirmed RF pipe0 IID
@@ -301,8 +327,9 @@ def build_trace(reader, slot: int) -> Pattern:
         return any(int(commits[i].value[idx]) != 0
                    and int(commit_iids[i].value[idx]) == rt
                    for i in range(3))
-    pat.wait(safe(wait_rtu_commit))
+    pat.wait(wait_rtu_commit, guard=flush_ok)
     pat.capture("rtu_commit.commit0_iid", commit_iids[0])
+    pat.capture("cycle_rtu_commit", cycle_cnt)
 
     # ---- Stage 11: RTU retire ----
     # Match retire IID against our confirmed RF pipe0 IID
@@ -312,24 +339,60 @@ def build_trace(reader, slot: int) -> Pattern:
             return False
         retire_iid = int(rob_retire_iid.value[idx])
         return retire_iid == caps["rf_pipe0.iid"]
-    pat.wait(safe(wait_rtu_retire))
+    pat.wait(wait_rtu_retire, guard=flush_ok)
     pat.capture("rtu_retire.retire0_pc", retire_pc)
+    pat.capture("cycle_rtu_retire", cycle_cnt)
 
     pat.timeout(TIMEOUT)
     return pat
 
 
+def compute_stage_timing(result, match_idx):
+    """Extract per-stage cycle numbers and compute delta from previous stage.
+
+    Returns list of dicts: [{"stage": name, "cycle": int, "delta": int}, ...]
+    Delta is cycles since the previous stage (first stage delta = 0).
+    """
+    timing = []
+    prev_cycle = None
+    for stage in STAGE_ORDER:
+        key = f"cycle_{stage}"
+        if key not in result.captures:
+            continue
+        val = result.captures[key].value[match_idx]
+        if val is None:
+            break
+        cycle = int(val)
+        delta = cycle - prev_cycle if prev_cycle is not None else 0
+        timing.append({"stage": stage, "cycle": cycle, "delta": delta})
+        prev_cycle = cycle
+    return timing
+
+
 def format_match(result, i, slot):
-    """Format a single match for text output."""
-    from wavekit.pattern import MatchStatus
+    """Format a single match for text output with per-stage timing."""
     status = MatchStatus(result.status.value[i]).name
     start = result.start.value[i]
     end = result.end.value[i]
     dur = result.duration.value[i]
     lines = [f"  Match #{i} [{status}]  cycles {start}->{end}  dur={dur}"]
+
+    # Per-stage timing header
+    stage_timing = compute_stage_timing(result, i)
+    if stage_timing:
+        header = "    Stage timing (cycle / delta):"
+        items = []
+        for st in stage_timing:
+            items.append(f"{st['stage']}={st['cycle']}(+{st['delta']})")
+        lines.append(header)
+        lines.append("      " + " | ".join(items))
+
+    # Signal captures (skip cycle_* keys, already shown above)
     for name, wf in result.captures.items():
+        if name.startswith("cycle_"):
+            continue
         val = wf.value[i]
-        lines.append(f"    {name} = {val}")
+        lines.append(f"    {name} = 0x{int(val):x}")
     return "\n".join(lines)
 
 
@@ -348,7 +411,6 @@ def main():
         result = pat.match(start_cycle=0, end_cycle=END_CYCLE)
         elapsed = time.time() - start
 
-        import numpy as np
         ok = int(np.sum(result.status.value == MatchStatus.OK))
         to = int(np.sum(result.status.value == MatchStatus.TIMEOUT))
         rv = int(np.sum(result.status.value == MatchStatus.REQUIRE_VIOLATED))
@@ -366,13 +428,13 @@ def main():
     # Save reports
     os.makedirs(OUTPUT, exist_ok=True)
     import json
-    import numpy as np
 
     for label, result in all_results.items():
         # JSON
         matches = []
         for i in range(len(result.start.value)):
             caps = {name: str(wf.value[i]) for name, wf in result.captures.items()}
+            stage_timing = compute_stage_timing(result, i)
             matches.append({
                 "id": i,
                 "start_cycle": int(result.start.value[i]),
@@ -380,14 +442,46 @@ def main():
                 "duration": int(result.duration.value[i]),
                 "status": MatchStatus(result.status.value[i]).name,
                 "captures": caps,
+                "stage_timing": stage_timing,
             })
-        with open(f"{OUTPUT}/{label}.json", "w") as f:
+        with open(f"{OUTPUT}/{label}.json", "w", encoding="utf-8") as f:
             json.dump({"trace_name": label, "matches": matches}, f, indent=2)
 
         # Text summary
         ok = int(np.sum(result.status.value == MatchStatus.OK))
         to = int(np.sum(result.status.value == MatchStatus.TIMEOUT))
         rv = int(np.sum(result.status.value == MatchStatus.REQUIRE_VIOLATED))
+        ok_idx = np.where(result.status.value == MatchStatus.OK)[0]
+
+        # Stage timing statistics (across all OK matches)
+        stage_stats = {}
+        if len(ok_idx) > 0:
+            for stage in STAGE_ORDER:
+                key = f"cycle_{stage}"
+                if key not in result.captures:
+                    continue
+                cycles = [int(result.captures[key].value[j]) for j in ok_idx
+                          if result.captures[key].value[j] is not None]
+                if not cycles:
+                    continue
+                # Delta from previous stage
+                prev_key = f"cycle_{STAGE_ORDER[STAGE_ORDER.index(stage) - 1]}" if STAGE_ORDER.index(stage) > 0 else None
+                if prev_key and prev_key in result.captures:
+                    deltas = [int(result.captures[key].value[j]) - int(result.captures[prev_key].value[j])
+                              for j in ok_idx
+                              if result.captures[key].value[j] is not None
+                              and result.captures[prev_key].value[j] is not None]
+                else:
+                    deltas = [0] * len(cycles)
+                stage_stats[stage] = {
+                    "cycle_avg": sum(cycles) / len(cycles),
+                    "cycle_min": min(cycles),
+                    "cycle_max": max(cycles),
+                    "delta_avg": sum(deltas) / len(deltas),
+                    "delta_min": min(deltas),
+                    "delta_max": max(deltas),
+                }
+
         lines = [
             f"Trace: {label}",
             f"  Stages: pcgen -> ifu_ib -> id_decode -> ir_rename -> rob_alloc",
@@ -397,11 +491,18 @@ def main():
             f"    OK: {ok}, TIMEOUT: {to}, REQUIRE_VIOLATED: {rv}",
             "",
         ]
-        ok_idx = np.where(result.status.value == MatchStatus.OK)[0]
+        if stage_stats:
+            lines.append("  Stage timing summary (cycle [min..max] / delta [min..max]):")
+            for stage, stats in stage_stats.items():
+                lines.append(
+                    f"    {stage:14s}  cy={stats['cycle_avg']:6.1f} [{stats['cycle_min']}..{stats['cycle_max']}]"
+                    f"  d={stats['delta_avg']:5.1f} [{stats['delta_min']}..{stats['delta_max']}]"
+                )
+            lines.append("")
         for j in ok_idx[:10]:
             lines.append(format_match(result, j, int(label[-1])))
             lines.append("")
-        with open(f"{OUTPUT}/{label}.txt", "w") as f:
+        with open(f"{OUTPUT}/{label}.txt", "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
         print(f"[INFO] Saved {OUTPUT}/{label}.json and .txt")
 
