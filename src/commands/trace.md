@@ -23,7 +23,7 @@ subtask: true
 
 ## 执行步骤
 
-1. 加载 `inst-sampling` skill
+1. 加载 `wavekit` 和 `inst-sampling` skills
 2. 阅读必要的 RTL/微架构上下文
 3. 在 `workspace/instTraces/<task_name>/trace.py` 编写 trace 脚本
 4. 运行 trace 脚本
