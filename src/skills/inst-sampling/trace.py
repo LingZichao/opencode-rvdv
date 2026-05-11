@@ -25,8 +25,8 @@ Key cross-points where slot positions are NOT preserved:
   - IS -> ROB: ROB create0 always from IS inst0; creates 1-3 use sel signals
   - AIQ -> RF pipes: AIQ0 can issue to pipe0 or pipe1
 
-Strategy: track by instruction word through front-end crossbars,
-then by IID from AIQ entry through execution and retire.
+Strategy: track by (pc15, instruction word) through front-end crossbars,
+then by selected AIQ port plus (IID, instruction word) through RF/execution.
 
 Usage:
   .venv/bin/python src/skills/inst-sampling/trace.py
@@ -94,39 +94,45 @@ def build_trace(reader, slot: int) -> Pattern:
 
     # ---- Stage 1: IFU IB (3 slots) ----
     inst_data = [_load(reader, f"x_ct_ifu_top.ifu_idu_ib_inst{i}_data[31:0]") for i in range(3)]
+    inst_pc = [_load(reader, f"x_ct_ifu_top.ifu_idu_ib_inst{i}_data[63:49]") for i in range(3)]
+    inst_vld = [_load(reader, f"x_ct_ifu_top.ifu_idu_ib_inst{i}_vld") for i in range(3)]
 
     # ---- Stage 2: IDU ID (3 pipeline positions) ----
     id_data = [_load(reader, f"x_ct_idu_top.x_ct_idu_id_dp.id_inst{i}_data[31:0]") for i in range(3)]
+    id_pc = [_load(reader, f"x_ct_idu_top.x_ct_idu_id_dp.id_inst{i}_data[63:49]") for i in range(3)]
     id_vld = [_load(reader, f"x_ct_idu_top.x_ct_idu_id_ctrl.ctrl_top_id_inst{i}_vld") for i in range(3)]
+    id_stall = _load(reader, "x_ct_idu_top.idu_ifu_id_stall")
 
     # ---- Stage 3: IDU IR (4 pipeline positions — 3-to-4 expansion) ----
     ir_data = [_load(reader, f"x_ct_idu_top.x_ct_idu_ir_dp.ir_inst{i}_data[31:0]") for i in range(4)]
+    ir_pc = [_load(reader, f"x_ct_idu_top.x_ct_idu_ir_dp.ir_inst{i}_data[167:153]") for i in range(4)]
     ir_vld = [_load(reader, f"x_ct_idu_top.x_ct_idu_ir_ctrl.ctrl_ir_pipedown_inst{i}_vld") for i in range(4)]
 
     # ---- Stage 4+5: ROB create (4 ports) + IIDs ----
     rob_iids = [_load(reader, f"rtu_idu_rob_inst{i}_iid[6:0]") for i in range(4)]
     rob_creates = [_load(reader, f"idu_rtu_rob_create{i}_en") for i in range(4)]
+    is_data = [_load(reader, f"x_ct_idu_top.x_ct_idu_is_dp.is_inst{i}_read_data[31:0]") for i in range(4)]
+    is_pc = [_load(reader, f"x_ct_idu_top.x_ct_idu_is_dp.is_inst{i}_read_data[199:185]") for i in range(4)]
+    is_vld = [_load(reader, f"x_ct_idu_top.ctrl_top_is_inst{i}_vld") for i in range(4)]
 
     # ---- Stage 6: AIQ0 create entries + IS dispatch IIDs ----
-    aiq0_ctrl_en = _load(reader, "x_ct_idu_top.x_ct_idu_is_aiq0.ctrl_aiq0_create0_dp_en")
-    aiq0_issue_en = _load(reader, "x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_xx_issue_en")
-    aiq0_bypass = _load(reader, "x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_bypass_en")
-    aiq0_dp_en = _load(reader, "x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_dp_en")
-    aiq0_create_en = _load(reader, "x_ct_idu_top.x_ct_idu_is_aiq0.x_ct_idu_is_aiq0_entry0.x_create_en")
-    aiq0_entry_in = _load(reader, "x_ct_idu_top.x_ct_idu_is_aiq0.aiq0_entry_create0_in")
     aiq_ens = [[_load(reader, f"x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq{q}_create{c}_en") for c in range(2)] for q in range(2)]
     aiq_iids = [[_load(reader, f"x_ct_idu_top.x_ct_idu_is_dp.is_aiq{q}_create{c}_iid[6:0]") for c in range(2)] for q in range(2)]
     # AIQ entry instruction word for crossbar disambiguation
     aiq0_c0_data = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.dp_aiq0_create0_data[31:0]")
     aiq0_c1_data = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.dp_aiq0_create1_data[31:0]")
+    aiq0_c0_pc = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create0_data[199:185]")
+    aiq0_c1_pc = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create1_data[199:185]")
 
     # ---- Stage 7: RF pipe0 issue to execution pipe ----
     rf_iid = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid[6:0]")
+    rf_opcode = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_opcode[31:0]")
     rf_func = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_func")
     rf_dst = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_preg[6:0]")
     rf_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_ctrl.rf_pipe0_inst_vld")
     rf_pd_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_pipedown_vld")
     rf_dst_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_vld")
+    rf_expt_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_expt_vld")
 
     # ---- Stage 8: RF pipe0 decode ----
     decd_func = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_func")
@@ -150,10 +156,14 @@ def build_trace(reader, slot: int) -> Pattern:
     commit_iids = [_load(reader, f"x_ct_rtu_top.rtu_yy_xx_commit{i}_iid[6:0]") for i in range(3)]
 
     # ---- Stage 12: RTU retire ----
-    retire0 = _load(reader, "x_ct_rtu_top.rtu_pad_retire0")
-    retire0_vld = _load(reader, "x_ct_rtu_top.rtu_yy_xx_retire0")
-    retire_pc = _load(reader, "x_ct_rtu_top.rtu_pad_retire0_pc[39:0]")
-    rob_retire_iid = _load(reader, "x_ct_rtu_top.rob_retire_inst0_iid[6:0]")
+    retires = [_load(reader, f"x_ct_rtu_top.rtu_pad_retire{i}") for i in range(3)]
+    retire_vlds = [_load(reader, f"x_ct_rtu_top.rtu_yy_xx_retire{i}") for i in range(3)]
+    retire_pcs = [_load(reader, f"x_ct_rtu_top.rtu_pad_retire{i}_pc[39:0]") for i in range(3)]
+    retire_iids = [
+        _load(reader, "x_ct_rtu_top.rob_retire_inst0_iid[6:0]"),
+        _load(reader, "x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.retire_inst1_iid[6:0]"),
+        _load(reader, "x_ct_rtu_top.x_ct_rtu_rob.x_ct_rtu_rob_rt.retire_inst2_iid[6:0]"),
+    ]
 
     # ---- Flush guard ----
     # While an instruction is in-flight, any flush invalidates this trace
@@ -183,22 +193,34 @@ def build_trace(reader, slot: int) -> Pattern:
     # Capture pcgen PC at the trigger cycle as reference context.
     # Note: due to IF->IB pipeline latency, the pcgen PC at this cycle
     # may not directly correspond to the traced instruction's PC.
-    # The instruction identity is tracked by its 32-bit instruction word
-    # through the front-end crossbar stages.
+    # The instruction identity is tracked as (pc15, opcode) through the
+    # front-end crossbar stages, then by IID after AIQ creation.
     vpc_wf = _load(reader, "x_ct_ifu_top.ifdp_ipdp_vpc")
 
-    # Wait for our slot's instruction at IB output, no ID stall
-    trigger_expr = (
-        f"({_s('x_ct_ifu_top.ifu_idu_ib_inst')}{slot}_vld != 0)"
-        f" and ({_s('x_ct_idu_top.idu_ifu_id_stall')} == 0)"
-        f" and ({_s('x_ct_ifu_top.ifdp_ipdp_vpc')} != 0)"
-        f" and ({_s('rtu_yy_xx_flush')} == 0)"
-        f" and ({_s('x_ct_ifu_top.rtu_ifu_flush')} == 0)"
-        f" and ({_s('x_ct_idu_top.rtu_idu_flush_fe')} == 0)"
-        f" and ({_s('x_ct_idu_top.rtu_idu_flush_is')} == 0)"
-    )
-    pat.wait(reader.eval(trigger_expr, clock=CLOCK, sample_on_posedge=True))
+    # Wait for a new accepted token at IB output.  The valid signals are
+    # level-like in practice, so suppress duplicate forks while the same
+    # (pc15, opcode) remains visible without a stall/flush boundary.
+    def trigger_ib(idx, _caps):
+        active = (int(inst_vld[slot].value[idx]) != 0
+                  and int(id_stall.value[idx]) == 0
+                  and int(vpc_wf.value[idx]) != 0
+                  and int(flush_ok.value[idx]) != 0)
+        if not active:
+            return False
+        if idx == 0:
+            return True
+        prev_active = (int(inst_vld[slot].value[idx - 1]) != 0
+                       and int(id_stall.value[idx - 1]) == 0
+                       and int(vpc_wf.value[idx - 1]) != 0
+                       and int(flush_ok.value[idx - 1]) != 0)
+        if not prev_active:
+            return True
+        return (int(inst_data[slot].value[idx]) != int(inst_data[slot].value[idx - 1])
+                or int(inst_pc[slot].value[idx]) != int(inst_pc[slot].value[idx - 1]))
+
+    pat.wait(trigger_ib)
     pat.capture(f"ifu_ib.inst{slot}", inst_data[slot])
+    pat.capture("ifu_ib.pc15", inst_pc[slot])
     pat.capture("pcgen.pc", pcgen_pc)
     pat.capture("pcgen.vpc", vpc_wf)
     pat.capture("cycle_pcgen_ib", cycle_cnt)
@@ -206,142 +228,184 @@ def build_trace(reader, slot: int) -> Pattern:
     # ---- Stage 2: IDU ID decode (3-wide, cross-pipe match) ----
     def wait_id_decode(idx, caps):
         inst = caps[f"ifu_ib.inst{slot}"]
+        pc15 = caps["ifu_ib.pc15"]
         return any(int(id_vld[i].value[idx]) != 0 and int(id_data[i].value[idx]) == inst
+                   and int(id_pc[i].value[idx]) == pc15
                    for i in range(3))
     pat.wait(wait_id_decode, guard=flush_ok)
     pat.capture("id_decode.id0", id_data[0])
+    pat.capture("id_decode.pc0", id_pc[0])
     pat.capture("id_decode.id1", id_data[1])
+    pat.capture("id_decode.pc1", id_pc[1])
     pat.capture("id_decode.id2", id_data[2])
+    pat.capture("id_decode.pc2", id_pc[2])
     pat.capture("cycle_id_decode", cycle_cnt)
 
     # ---- Stage 3: IDU IR rename (4-wide after 3→4 expansion, cross-pipe) ----
     def wait_ir_rename(idx, caps):
         id_words = [caps[f"id_decode.id{i}"] for i in range(3)]
+        pc15 = caps["ifu_ib.pc15"]
         return any(int(ir_vld[i].value[idx]) != 0
                    and int(ir_data[i].value[idx]) in id_words
+                   and int(ir_pc[i].value[idx]) == pc15
                    for i in range(4))
     pat.wait(wait_ir_rename, guard=flush_ok)
     for i in range(4):
         pat.capture(f"ir_rename.ir{i}", ir_data[i])
+        pat.capture(f"ir_rename.pc{i}", ir_pc[i])
     pat.capture("cycle_ir_rename", cycle_cnt)
 
-    # ---- Stage 4: ROB allocate (4 create ports) ----
-    # Wait for at least one ROB create to happen; capture IIDs for context.
-    def wait_rob_alloc(idx, caps):
-        return any(int(rob_creates[i].value[idx]) != 0 for i in range(4))
-    pat.wait(wait_rob_alloc, guard=flush_ok)
+    def _aiq0_match_port(idx, caps):
+        inst = caps[f"ifu_ib.inst{slot}"]
+        pc15 = caps["ifu_ib.pc15"]
+        if int(aiq_ens[0][0].value[idx]) != 0:
+            if int(aiq0_c0_data.value[idx]) == inst and int(aiq0_c0_pc.value[idx]) == pc15:
+                return 0
+        if int(aiq_ens[0][1].value[idx]) != 0:
+            if int(aiq0_c1_data.value[idx]) == inst and int(aiq0_c1_pc.value[idx]) == pc15:
+                return 1
+        return -1
+
+    def aiq0_matches(idx, caps):
+        return _aiq0_match_port(idx, caps) >= 0
+
+    def _aiq0_match_iid(idx, caps):
+        port = _aiq0_match_port(idx, caps)
+        if port < 0:
+            return -1
+        return int(aiq_iids[0][port].value[idx])
+
+    def _aiq0_match_opcode(idx, caps):
+        port = _aiq0_match_port(idx, caps)
+        if port == 0:
+            return int(aiq0_c0_data.value[idx])
+        if port == 1:
+            return int(aiq0_c1_data.value[idx])
+        return -1
+
+    def _aiq0_match_pc15(idx, caps):
+        port = _aiq0_match_port(idx, caps)
+        if port == 0:
+            return int(aiq0_c0_pc.value[idx])
+        if port == 1:
+            return int(aiq0_c1_pc.value[idx])
+        return -1
+
+    # ---- Stage 4+5: ROB allocate + AIQ0 create ----
+    # These happen in the same cycle, so keep them in one blocking wait.
+    def wait_is_dispatch(idx, caps):
+        inst = caps[f"ifu_ib.inst{slot}"]
+        pc15 = caps["ifu_ib.pc15"]
+        target_in_is = any(int(is_vld[i].value[idx]) != 0
+                           and int(is_data[i].value[idx]) == inst
+                           and int(is_pc[i].value[idx]) == pc15
+                           for i in range(4))
+        return (target_in_is
+                and any(int(rob_creates[i].value[idx]) != 0 for i in range(4))
+                and aiq0_matches(idx, caps))
+    pat.wait(wait_is_dispatch, guard=flush_ok)
     for i in range(4):
         pat.capture(f"rob_alloc.iid{i}", rob_iids[i])
         pat.capture(f"rob_alloc.create{i}_en", rob_creates[i])
+        pat.capture(f"is_stage.inst{i}", is_data[i])
+        pat.capture(f"is_stage.pc{i}", is_pc[i])
     pat.capture("cycle_rob_alloc", cycle_cnt)
-
-    # ---- Stage 5: IS AIQ0 create with instruction-word disambiguation ----
-    # Key fix: we match the AIQ entry by its instruction word
-    # (bits [31:0] of dp_aiq0_create*_data), NOT by guessing which
-    # ROB IID belongs to which instruction. This resolves the crossbar:
-    # any IS inst can go to any AIQ create port.
-    def wait_aiq0(idx, caps):
-        if not (int(aiq0_ctrl_en.value[idx]) != 0
-                and int(aiq0_issue_en.value[idx]) != 0
-                and int(aiq0_bypass.value[idx]) != 0
-                and int(aiq0_dp_en.value[idx]) != 0
-                and int(aiq0_create_en.value[idx]) == int(aiq0_entry_in.value[idx])):
-            return False
-        # Our instruction word from the IB trigger
-        inst = caps[f"ifu_ib.inst{slot}"]
-        # Check AIQ0 create0 and create1 for matching instruction word
-        # Only exact match against the tracked instruction word.
-        # (Compressed-instruction expansion would change the word;
-        #  those cases need IR-word matching with tighter disambiguation.)
-        if int(aiq_ens[0][0].value[idx]) != 0:
-            if int(aiq0_c0_data.value[idx]) == inst:
-                return True
-        if int(aiq_ens[0][1].value[idx]) != 0:
-            if int(aiq0_c1_data.value[idx]) == inst:
-                return True
-        return False
-    pat.wait(wait_aiq0, guard=flush_ok)
     # Capture both AIQ create port IIDs for reference
     # The correct one will be matched at the RF stage
     pat.capture("aiq.a0c0_iid", aiq_iids[0][0])
     pat.capture("aiq.a0c0_data", aiq0_c0_data)
+    pat.capture("aiq.a0c0_pc15", aiq0_c0_pc)
     pat.capture("aiq.a0c1_iid", aiq_iids[0][1])
     pat.capture("aiq.a0c1_data", aiq0_c1_data)
+    pat.capture("aiq.a0c1_pc15", aiq0_c1_pc)
+    pat.capture("aiq.port", _aiq0_match_port)
+    pat.capture("aiq.iid", _aiq0_match_iid)
+    pat.capture("aiq.opcode", _aiq0_match_opcode)
+    pat.capture("aiq.pc15", _aiq0_match_pc15)
     pat.capture("cycle_aiq_create", cycle_cnt)
 
-    # ---- Stage 6: RF pipe0 launch ----
-    # Match RF pipe0 IID against AIQ IIDs (not ROB IIDs).
-    # The AIQ IIDs are guaranteed to be from the correct cycle
-    # because we matched by instruction word at the AIQ entry.
-    def wait_rf_pipe0(idx, caps):
-        if not (int(rf_vld.value[idx]) != 0
-                and int(rf_pd_vld.value[idx]) != 0
-                and int(rf_dst_vld.value[idx]) != 0):
+    # ---- Stage 6+7+8: RF pipe0 launch + decode + IU receive ----
+    # These are same-cycle for pipe0.  Keep them in one blocking wait; otherwise
+    # a later wait would start one cycle late and could miss the IU receive edge.
+    def wait_rf_pipe0_iu(idx, caps):
+        if not (int(rf_vld.value[idx]) != 0 and int(rf_pd_vld.value[idx]) != 0):
             return False
-        pipe0_iid = int(rf_iid.value[idx])
-        # Match against AIQ0 create0 and create1 IIDs
-        return (pipe0_iid == caps.get("aiq.a0c0_iid", -1)
-                or pipe0_iid == caps.get("aiq.a0c1_iid", -1))
-    pat.wait(wait_rf_pipe0, guard=flush_ok)
+        if int(rf_iid.value[idx]) != caps["aiq.iid"]:
+            return False
+        if int(rf_opcode.value[idx]) != caps["aiq.opcode"]:
+            return False
+        if int(decd_expt.value[idx]) != 0 or int(rf_expt_vld.value[idx]) != 0:
+            return False
+        return (int(iu_sel.value[idx]) != 0
+                and int(iu_iid.value[idx]) == int(rf_iid.value[idx])
+                and int(iu_func.value[idx]) == int(rf_func.value[idx])
+                and int(iu_dst.value[idx]) == int(rf_dst.value[idx]))
+    pat.wait(wait_rf_pipe0_iu, guard=flush_ok)
     pat.capture("rf_pipe0.iid", rf_iid)
+    pat.capture("rf_pipe0.opcode", rf_opcode)
     pat.capture("rf_pipe0.func", rf_func)
+    pat.capture("rf_pipe0.dst_vld", rf_dst_vld)
     pat.capture("rf_pipe0.dst_preg", rf_dst)
     pat.capture("cycle_rf_issue", cycle_cnt)
-
-    # ---- Stage 7: RF pipe0 decode ----
-    def wait_rf_decode(idx, caps):
-        return (int(rf_iid.value[idx]) == caps["rf_pipe0.iid"]
-                and int(decd_func.value[idx]) == caps["rf_pipe0.func"]
-                and int(decd_expt.value[idx]) == 0)
-    pat.wait(wait_rf_decode, guard=flush_ok)
     pat.capture("rf_decode.iid", rf_iid)
+    pat.capture("rf_decode.opcode", rf_opcode)
+    pat.capture("rf_decode.func", decd_func)
     pat.capture("cycle_rf_decode", cycle_cnt)
-
-    # ---- Stage 8: IU pipe0 receive ----
-    def wait_iu_recv(idx, caps):
-        return (int(iu_sel.value[idx]) != 0
-                and int(iu_iid.value[idx]) == caps["rf_decode.iid"]
-                and int(iu_func.value[idx]) == caps["rf_pipe0.func"]
-                and int(iu_dst.value[idx]) == caps["rf_pipe0.dst_preg"])
-    pat.wait(wait_iu_recv, guard=flush_ok)
     pat.capture("iu_recv.iid", iu_iid)
+    pat.capture("iu_recv.func", iu_func)
     pat.capture("iu_recv.dst_preg", iu_dst)
     pat.capture("cycle_iu_exec", cycle_cnt)
 
     # ---- Stage 9: IU pipe0 complete ----
     def wait_iu_cmplt(idx, caps):
-        return (int(alu_vld.value[idx]) != 0
-                and int(alu_preg.value[idx]) == caps["iu_recv.dst_preg"]
-                and int(cbus_cmplt.value[idx]) != 0
-                and int(cbus_iid.value[idx]) == caps["iu_recv.iid"])
+        if not (int(cbus_cmplt.value[idx]) != 0
+                and int(cbus_iid.value[idx]) == caps["iu_recv.iid"]):
+            return False
+        if caps["rf_pipe0.dst_vld"] == 0:
+            return True
+        return int(alu_vld.value[idx]) != 0 and int(alu_preg.value[idx]) == caps["iu_recv.dst_preg"]
     pat.wait(wait_iu_cmplt, guard=flush_ok)
     pat.capture("iu_cmplt.rt_iid", rt_iid)
     pat.capture("cycle_iu_cmplt", cycle_cnt)
 
-    # ---- Stage 10: RTU commit (3 commit slots) ----
-    # Match rt_iid (from IU completion) against our confirmed RF pipe0 IID
-    def wait_rtu_commit(idx, caps):
+    def _commit_matches(idx, caps):
         rt = caps["iu_cmplt.rt_iid"]
         piped_iid = caps["rf_pipe0.iid"]
         if rt != piped_iid:
-            return False
-        return any(int(commits[i].value[idx]) != 0
-                   and int(commit_iids[i].value[idx]) == rt
-                   for i in range(3))
-    pat.wait(wait_rtu_commit, guard=flush_ok)
-    pat.capture("rtu_commit.commit0_iid", commit_iids[0])
-    pat.capture("cycle_rtu_commit", cycle_cnt)
+            return -1
+        for i in range(3):
+            if int(commits[i].value[idx]) != 0 and int(commit_iids[i].value[idx]) == rt:
+                return i
+        return -1
 
-    # ---- Stage 11: RTU retire ----
-    # Match retire IID against our confirmed RF pipe0 IID
-    def wait_rtu_retire(idx, caps):
-        if not (int(retire0.value[idx]) != 0
-                and int(retire0_vld.value[idx]) != 0):
-            return False
-        retire_iid = int(rob_retire_iid.value[idx])
-        return retire_iid == caps["rf_pipe0.iid"]
-    pat.wait(wait_rtu_retire, guard=flush_ok)
-    pat.capture("rtu_retire.retire0_pc", retire_pc)
+    def _retire_matches(idx, caps):
+        iid = caps["rf_pipe0.iid"]
+        for i in range(3):
+            if ((int(retires[i].value[idx]) != 0 or int(retire_vlds[i].value[idx]) != 0)
+                    and int(retire_iids[i].value[idx]) == iid):
+                return i
+        return -1
+
+    # ---- Stage 10+11: RTU commit + retire ----
+    # Commit and architectural retire can appear in the same sampled cycle.
+    def wait_rtu_commit_retire(idx, caps):
+        return _commit_matches(idx, caps) >= 0 and _retire_matches(idx, caps) >= 0
+    pat.wait(wait_rtu_commit_retire, guard=flush_ok)
+    for i in range(3):
+        pat.capture(f"rtu_commit.commit{i}_iid", commit_iids[i])
+        pat.capture(f"rtu_retire.retire{i}_iid", retire_iids[i])
+        pat.capture(f"rtu_retire.retire{i}_pc", retire_pcs[i])
+    pat.capture("rtu_commit.slot", _commit_matches)
+    pat.capture("cycle_rtu_commit", cycle_cnt)
+    pat.capture("rtu_retire.slot", _retire_matches)
+    pat.capture(
+        "rtu_retire.pc",
+        lambda idx, caps: int(retire_pcs[_retire_matches(idx, caps)].value[idx]),
+    )
+    pat.capture(
+        "rtu_retire.pc15",
+        lambda idx, caps: (int(retire_pcs[_retire_matches(idx, caps)].value[idx]) >> 1) & 0x7fff,
+    )
     pat.capture("cycle_rtu_retire", cycle_cnt)
 
     pat.timeout(TIMEOUT)
@@ -433,6 +497,17 @@ def compute_flat_stage_stats(matches):
             "delta_max": max(deltas),
         }
     return stats
+
+
+def compute_status_stage_counts(matches):
+    """Count terminal stage by match status for timeout/debug triage."""
+    counts = {}
+    for match in matches:
+        status = match["status"]
+        stage = match["stage_timing"][-1]["stage"] if match["stage_timing"] else "none"
+        counts.setdefault(status, {})
+        counts[status][stage] = counts[status].get(stage, 0) + 1
+    return counts
 
 
 def format_match(result, i, slot):
@@ -538,6 +613,7 @@ def main():
         for status in MatchStatus
     }
     stage_stats = compute_flat_stage_stats(matches)
+    status_stage_counts = compute_status_stage_counts(matches)
 
     trace = {
         "trace_name": "openc910_inst_lifecycle",
@@ -546,6 +622,7 @@ def main():
         "start_cycle": 0,
         "end_cycle": END_CYCLE,
         "status_counts": status_counts,
+        "status_stage_counts": status_stage_counts,
         "stage_stats": stage_stats,
         "matches": matches,
     }
@@ -563,6 +640,15 @@ def main():
         f"REQUIRE_VIOLATED: {status_counts['REQUIRE_VIOLATED']}",
         "",
     ]
+    for status in ("TIMEOUT", "REQUIRE_VIOLATED"):
+        stage_counts = status_stage_counts.get(status, {})
+        if not stage_counts:
+            continue
+        lines.append(f"  {status} terminal stage counts:")
+        for stage, count in sorted(stage_counts.items(), key=lambda item: (-item[1], item[0])):
+            lines.append(f"    {stage:14s}  {count}")
+        lines.append("")
+
     if stage_stats:
         lines.append("  Stage timing summary (cycle [min..max] / delta [min..max]):")
         for stage, stats in stage_stats.items():
