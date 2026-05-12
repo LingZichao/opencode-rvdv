@@ -80,6 +80,9 @@ def _load(reader, name: str):
 def build_trace(reader, slot: int) -> Pattern:
     """Build a 12-stage instruction trace using wavekit's native Pattern API.
 
+    The pattern tries both AIQ0 and AIQ1 at the dispatch point and
+    automatically follows whichever execution pipe the instruction takes.
+
     Args:
         slot: IB output position (0, 1, or 2) to trigger on.
     """
@@ -114,41 +117,56 @@ def build_trace(reader, slot: int) -> Pattern:
     is_pc = [_load(reader, f"x_ct_idu_top.x_ct_idu_is_dp.is_inst{i}_read_data[199:185]") for i in range(4)]
     is_vld = [_load(reader, f"x_ct_idu_top.ctrl_top_is_inst{i}_vld") for i in range(4)]
 
-    # ---- Stage 6: AIQ0 create entries + IS dispatch IIDs ----
+    # ---- Stage 6: AIQ create entries + IS dispatch IIDs ----
     aiq_ens = [[_load(reader, f"x_ct_idu_top.x_ct_idu_is_ctrl.is_dis_aiq{q}_create{c}_en") for c in range(2)] for q in range(2)]
     aiq_iids = [[_load(reader, f"x_ct_idu_top.x_ct_idu_is_dp.is_aiq{q}_create{c}_iid[6:0]") for c in range(2)] for q in range(2)]
     # AIQ entry instruction word for crossbar disambiguation
-    aiq0_c0_data = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.dp_aiq0_create0_data[31:0]")
-    aiq0_c1_data = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.dp_aiq0_create1_data[31:0]")
-    aiq0_c0_pc = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create0_data[199:185]")
-    aiq0_c1_pc = _load(reader, "x_ct_idu_top.x_ct_idu_is_dp.is_aiq0_create1_data[199:185]")
+    aiq_c_data = [
+        [_load(reader, f"x_ct_idu_top.x_ct_idu_is_dp.dp_aiq{q}_create{c}_data[31:0]") for c in range(2)]
+        for q in range(2)
+    ]
+    aiq_c_pc = [
+        [_load(reader, f"x_ct_idu_top.x_ct_idu_is_dp.is_aiq{q}_create{c}_data[199:185]") for c in range(2)]
+        for q in range(2)
+    ]
 
-    # ---- Stage 7: RF pipe0 issue to execution pipe ----
-    rf_iid = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_iid[6:0]")
-    rf_opcode = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_opcode[31:0]")
-    rf_func = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_func")
-    rf_dst = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_preg[6:0]")
-    rf_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_ctrl.rf_pipe0_inst_vld")
-    rf_pd_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe0_pipedown_vld")
-    rf_dst_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_dst_vld")
-    rf_expt_vld = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_expt_vld")
+    # ---- Stages 7-10: RF pipe, decode, IU receive, IU complete (per-pipe) ----
+    # Pipe0 has full signal set; pipe1 lacks opcode, expt_vld and decd_expt_vld
+    # (C910 architecture: all exception handling goes through pipe0 only).
+    rf_iid = [_load(reader, f"x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe{p}_iid[6:0]") for p in range(2)]
+    rf_func = [_load(reader, f"x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe{p}_func") for p in range(2)]
+    rf_dst = [_load(reader, f"x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe{p}_dst_preg[6:0]") for p in range(2)]
+    rf_vld = [_load(reader, f"x_ct_idu_top.x_ct_idu_rf_ctrl.rf_pipe{p}_inst_vld") for p in range(2)]
+    rf_pd_vld = [_load(reader, f"x_ct_idu_top.x_ct_idu_rf_ctrl.ctrl_rf_pipe{p}_pipedown_vld") for p in range(2)]
+    rf_dst_vld = [_load(reader, f"x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe{p}_dst_vld") for p in range(2)]
+    # Pipe0-only signals (pipe1 = None — these signals do not exist in RTL)
+    rf_opcode = [
+        _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_opcode[31:0]"),
+        None,
+    ]
+    rf_expt_vld = [
+        _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.idu_iu_rf_pipe0_expt_vld"),
+        None,
+    ]
+    decd_expt = [
+        _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_expt_vld"),
+        None,
+    ]
+    decd_func = [
+        _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_func"),
+        _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.pipe1_decd_func"),
+    ]
 
-    # ---- Stage 8: RF pipe0 decode ----
-    decd_func = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_func")
-    decd_expt = _load(reader, "x_ct_idu_top.x_ct_idu_rf_dp.x_ct_idu_rf_pipe0_decd.pipe0_decd_expt_vld")
+    iu_sel = [_load(reader, f"x_ct_iu_top.idu_iu_rf_pipe{p}_sel") for p in range(2)]
+    iu_iid = [_load(reader, f"x_ct_iu_top.idu_iu_rf_pipe{p}_iid[6:0]") for p in range(2)]
+    iu_func = [_load(reader, f"x_ct_iu_top.idu_iu_rf_pipe{p}_func") for p in range(2)]
+    iu_dst = [_load(reader, f"x_ct_iu_top.idu_iu_rf_pipe{p}_dst_preg[6:0]") for p in range(2)]
 
-    # ---- Stage 9: IU pipe0 receive ----
-    iu_sel = _load(reader, "x_ct_iu_top.idu_iu_rf_pipe0_sel")
-    iu_iid = _load(reader, "x_ct_iu_top.idu_iu_rf_pipe0_iid[6:0]")
-    iu_func = _load(reader, "x_ct_iu_top.idu_iu_rf_pipe0_func")
-    iu_dst = _load(reader, "x_ct_iu_top.idu_iu_rf_pipe0_dst_preg[6:0]")
-
-    # ---- Stage 10: IU pipe0 complete ----
-    alu_vld = _load(reader, "x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_data_vld")
-    alu_preg = _load(reader, "x_ct_iu_top.x_ct_iu_alu0.alu_rbus_ex1_pipex_preg[6:0]")
-    cbus_cmplt = _load(reader, "x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_cmplt")
-    cbus_iid = _load(reader, "x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe0_iid[6:0]")
-    rt_iid = _load(reader, "iu_rtu_pipe0_iid[6:0]")
+    alu_vld = [_load(reader, f"x_ct_iu_top.x_ct_iu_alu{p}.alu_rbus_ex1_pipex_data_vld") for p in range(2)]
+    alu_preg = [_load(reader, f"x_ct_iu_top.x_ct_iu_alu{p}.alu_rbus_ex1_pipex_preg[6:0]") for p in range(2)]
+    cbus_cmplt = [_load(reader, f"x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe{p}_cmplt") for p in range(2)]
+    cbus_iid = [_load(reader, f"x_ct_iu_top.x_ct_iu_cbus.iu_rtu_pipe{p}_iid[6:0]") for p in range(2)]
+    rt_iid = [_load(reader, f"iu_rtu_pipe{p}_iid[6:0]") for p in range(2)]
 
     # ---- Stage 11: RTU commit (3 commit slots) ----
     commits = [_load(reader, f"x_ct_rtu_top.rtu_yy_xx_commit{i}") for i in range(3)]
@@ -250,12 +268,12 @@ def build_trace(reader, slot: int) -> Pattern:
     pat.capture("cycle_id_decode", cycle_cnt)
 
     # ---- Stage 3: IDU IR rename (4-wide after 3→4 expansion, cross-pipe) ----
+    # Match by pc15 only — instruction word changes at IR because 16-bit
+    # compressed instructions (RVC) are expanded to their 32-bit equivalents.
     def _ir_match_lane(idx, caps):
-        inst = caps["id_decode.inst"]
         pc15 = caps["id_decode.pc15"]
         for i in range(4):
             if (int(ir_vld[i].value[idx]) != 0
-                    and int(ir_data[i].value[idx]) == inst
                     and int(ir_pc[i].value[idx]) == pc15):
                 return i
         return -1
@@ -278,48 +296,54 @@ def build_trace(reader, slot: int) -> Pattern:
                 return i
         return -1
 
-    def _aiq0_match_port(idx, caps):
-        inst = caps["ifu_ib.inst"]
+    # ---- Stage 4+5: ROB allocate + AIQ create (try both AIQ0 and AIQ1) ----
+    # Scan all 4 AIQ create ports (AIQ0×2 + AIQ1×2) to find which pipe the
+    # instruction was dispatched to.  Returns (queue, port) or (-1, -1).
+    def _aiq_match_queue_port(idx, caps):
         pc15 = caps["ifu_ib.pc15"]
-        if int(aiq_ens[0][0].value[idx]) != 0:
-            if int(aiq0_c0_data.value[idx]) == inst and int(aiq0_c0_pc.value[idx]) == pc15:
-                return 0
-        if int(aiq_ens[0][1].value[idx]) != 0:
-            if int(aiq0_c1_data.value[idx]) == inst and int(aiq0_c1_pc.value[idx]) == pc15:
-                return 1
-        return -1
+        inst = caps.get("ir_rename.inst", caps["ifu_ib.inst"])
+        for q in range(2):
+            for c in range(2):
+                if int(aiq_ens[q][c].value[idx]) != 0:
+                    if (int(aiq_c_data[q][c].value[idx]) == inst
+                            and int(aiq_c_pc[q][c].value[idx]) == pc15):
+                        return (q, c)
+        return (-1, -1)
 
-    def aiq0_matches(idx, caps):
-        return _aiq0_match_port(idx, caps) >= 0
+    def aiq_matches(idx, caps):
+        q, _c = _aiq_match_queue_port(idx, caps)
+        return q >= 0
 
-    def _aiq0_match_iid(idx, caps):
-        port = _aiq0_match_port(idx, caps)
-        if port < 0:
+    def _aiq_match_queue(idx, caps):
+        q, _c = _aiq_match_queue_port(idx, caps)
+        return q
+
+    def _aiq_match_port(idx, caps):
+        _q, c = _aiq_match_queue_port(idx, caps)
+        return c
+
+    def _aiq_match_iid(idx, caps):
+        q, c = _aiq_match_queue_port(idx, caps)
+        if q < 0:
             return -1
-        return int(aiq_iids[0][port].value[idx])
+        return int(aiq_iids[q][c].value[idx])
 
-    def _aiq0_match_opcode(idx, caps):
-        port = _aiq0_match_port(idx, caps)
-        if port == 0:
-            return int(aiq0_c0_data.value[idx])
-        if port == 1:
-            return int(aiq0_c1_data.value[idx])
-        return -1
+    def _aiq_match_opcode(idx, caps):
+        q, c = _aiq_match_queue_port(idx, caps)
+        if q < 0:
+            return -1
+        return int(aiq_c_data[q][c].value[idx])
 
-    def _aiq0_match_pc15(idx, caps):
-        port = _aiq0_match_port(idx, caps)
-        if port == 0:
-            return int(aiq0_c0_pc.value[idx])
-        if port == 1:
-            return int(aiq0_c1_pc.value[idx])
-        return -1
+    def _aiq_match_pc15(idx, caps):
+        q, c = _aiq_match_queue_port(idx, caps)
+        if q < 0:
+            return -1
+        return int(aiq_c_pc[q][c].value[idx])
 
-    # ---- Stage 4+5: ROB allocate + AIQ0 create ----
-    # These happen in the same cycle, so keep them in one blocking wait.
     def wait_is_dispatch(idx, caps):
         return (_is_match_lane(idx, caps) >= 0
                 and any(int(rob_creates[i].value[idx]) != 0 for i in range(4))
-                and aiq0_matches(idx, caps))
+                and aiq_matches(idx, caps))
 
     def _rob_create_mask(idx, _caps):
         mask = 0
@@ -332,62 +356,73 @@ def build_trace(reader, slot: int) -> Pattern:
     pat.capture("is_stage.inst", _selected_value(is_data, "is_stage.lane"))
     pat.capture("is_stage.pc15", _selected_value(is_pc, "is_stage.lane"))
     pat.capture("rob_alloc.create_mask", _rob_create_mask)
-    pat.capture("rob_alloc.iid", _aiq0_match_iid)
+    pat.capture("rob_alloc.iid", _aiq_match_iid)
     pat.capture("cycle_rob_alloc", cycle_cnt)
-    pat.capture("aiq.queue", lambda _idx, _caps: 0)
-    pat.capture("aiq.port", _aiq0_match_port)
-    pat.capture("aiq.iid", _aiq0_match_iid)
-    pat.capture("aiq.opcode", _aiq0_match_opcode)
-    pat.capture("aiq.pc15", _aiq0_match_pc15)
+    pat.capture("aiq.queue", _aiq_match_queue)
+    pat.capture("aiq.port", _aiq_match_port)
+    pat.capture("aiq.iid", _aiq_match_iid)
+    pat.capture("aiq.opcode", _aiq_match_opcode)
+    pat.capture("aiq.pc15", _aiq_match_pc15)
     pat.capture("cycle_aiq_create", cycle_cnt)
 
-    # ---- Stage 6+7+8: RF pipe0 launch + decode + IU receive ----
-    # These are same-cycle for pipe0.  Keep them in one blocking wait; otherwise
-    # a later wait would start one cycle late and could miss the IU receive edge.
-    def wait_rf_pipe0_iu(idx, caps):
-        if not (int(rf_vld.value[idx]) != 0 and int(rf_pd_vld.value[idx]) != 0):
+    # ---- Stage 6+7+8: RF pipe launch + decode + IU receive ----
+    # Use captured aiq.queue to select the correct pipe's signals.
+    # Pipe1 lacks opcode/expt_vld/decd_expt_vld — skip those checks.
+    def _q(caps):
+        return int(caps["aiq.queue"])
+
+    def wait_rf_pipe_iu(idx, caps):
+        q = _q(caps)
+        if not (int(rf_vld[q].value[idx]) != 0 and int(rf_pd_vld[q].value[idx]) != 0):
             return False
-        if int(rf_iid.value[idx]) != caps["aiq.iid"]:
+        if int(rf_iid[q].value[idx]) != caps["aiq.iid"]:
             return False
-        if int(rf_opcode.value[idx]) != caps["aiq.opcode"]:
-            return False
-        if int(decd_expt.value[idx]) != 0 or int(rf_expt_vld.value[idx]) != 0:
-            return False
-        return (int(iu_sel.value[idx]) != 0
-                and int(iu_iid.value[idx]) == int(rf_iid.value[idx])
-                and int(iu_func.value[idx]) == int(rf_func.value[idx])
-                and int(iu_dst.value[idx]) == int(rf_dst.value[idx]))
-    pat.wait(wait_rf_pipe0_iu, guard=flush_ok)
-    pat.capture("rf_pipe0.iid", rf_iid)
-    pat.capture("rf_pipe0.opcode", rf_opcode)
-    pat.capture("rf_pipe0.func", rf_func)
-    pat.capture("rf_pipe0.dst_vld", rf_dst_vld)
-    pat.capture("rf_pipe0.dst_preg", rf_dst)
+        if rf_opcode[q] is not None:
+            if int(rf_opcode[q].value[idx]) != caps["aiq.opcode"]:
+                return False
+        if rf_expt_vld[q] is not None:
+            if int(rf_expt_vld[q].value[idx]) != 0:
+                return False
+        if decd_expt[q] is not None:
+            if int(decd_expt[q].value[idx]) != 0:
+                return False
+        return (int(iu_sel[q].value[idx]) != 0
+                and int(iu_iid[q].value[idx]) == int(rf_iid[q].value[idx])
+                and int(iu_func[q].value[idx]) == int(rf_func[q].value[idx])
+                and int(iu_dst[q].value[idx]) == int(rf_dst[q].value[idx]))
+    pat.wait(wait_rf_pipe_iu, guard=flush_ok)
+    # Use lambdas for pipe-specific captures — resolve signal from captured queue
+    pat.capture("rf_pipe.iid", lambda idx, caps: int(rf_iid[_q(caps)].value[idx]))
+    pat.capture("rf_pipe.opcode", lambda idx, caps: int(rf_opcode[_q(caps)].value[idx]) if rf_opcode[_q(caps)] is not None else -1)
+    pat.capture("rf_pipe.func", lambda idx, caps: int(rf_func[_q(caps)].value[idx]))
+    pat.capture("rf_pipe.dst_vld", lambda idx, caps: int(rf_dst_vld[_q(caps)].value[idx]))
+    pat.capture("rf_pipe.dst_preg", lambda idx, caps: int(rf_dst[_q(caps)].value[idx]))
     pat.capture("cycle_rf_issue", cycle_cnt)
-    pat.capture("rf_decode.iid", rf_iid)
-    pat.capture("rf_decode.opcode", rf_opcode)
-    pat.capture("rf_decode.func", decd_func)
+    pat.capture("rf_decode.iid", lambda idx, caps: int(rf_iid[_q(caps)].value[idx]))
+    pat.capture("rf_decode.opcode", lambda idx, caps: int(rf_opcode[_q(caps)].value[idx]) if rf_opcode[_q(caps)] is not None else -1)
+    pat.capture("rf_decode.func", lambda idx, caps: int(decd_func[_q(caps)].value[idx]))
     pat.capture("cycle_rf_decode", cycle_cnt)
-    pat.capture("iu_recv.iid", iu_iid)
-    pat.capture("iu_recv.func", iu_func)
-    pat.capture("iu_recv.dst_preg", iu_dst)
+    pat.capture("iu_recv.iid", lambda idx, caps: int(iu_iid[_q(caps)].value[idx]))
+    pat.capture("iu_recv.func", lambda idx, caps: int(iu_func[_q(caps)].value[idx]))
+    pat.capture("iu_recv.dst_preg", lambda idx, caps: int(iu_dst[_q(caps)].value[idx]))
     pat.capture("cycle_iu_exec", cycle_cnt)
 
-    # ---- Stage 9: IU pipe0 complete ----
+    # ---- Stage 9: IU pipe complete ----
     def wait_iu_cmplt(idx, caps):
-        if not (int(cbus_cmplt.value[idx]) != 0
-                and int(cbus_iid.value[idx]) == caps["iu_recv.iid"]):
+        q = _q(caps)
+        if not (int(cbus_cmplt[q].value[idx]) != 0
+                and int(cbus_iid[q].value[idx]) == caps["iu_recv.iid"]):
             return False
-        if caps["rf_pipe0.dst_vld"] == 0:
+        if caps["rf_pipe.dst_vld"] == 0:
             return True
-        return int(alu_vld.value[idx]) != 0 and int(alu_preg.value[idx]) == caps["iu_recv.dst_preg"]
+        return int(alu_vld[q].value[idx]) != 0 and int(alu_preg[q].value[idx]) == caps["iu_recv.dst_preg"]
     pat.wait(wait_iu_cmplt, guard=flush_ok)
-    pat.capture("iu_cmplt.rt_iid", rt_iid)
+    pat.capture("iu_cmplt.rt_iid", lambda idx, caps: int(rt_iid[_q(caps)].value[idx]))
     pat.capture("cycle_iu_cmplt", cycle_cnt)
 
     def _commit_matches(idx, caps):
         rt = caps["iu_cmplt.rt_iid"]
-        piped_iid = caps["rf_pipe0.iid"]
+        piped_iid = caps["rf_pipe.iid"]
         if rt != piped_iid:
             return -1
         for i in range(3):
@@ -396,7 +431,7 @@ def build_trace(reader, slot: int) -> Pattern:
         return -1
 
     def _retire_matches(idx, caps):
-        iid = caps["rf_pipe0.iid"]
+        iid = caps["rf_pipe.iid"]
         for i in range(3):
             if ((int(retires[i].value[idx]) != 0 or int(retire_vlds[i].value[idx]) != 0)
                     and int(retire_iids[i].value[idx]) == iid):
@@ -486,28 +521,31 @@ def _json_value(val):
 def build_match_record(result, i, slot):
     """Build one flattened match record with slot kept as metadata."""
     stage_timing = compute_stage_timing(result, i)
+    captures = {
+        name: _json_value(wf.value[i])
+        for name, wf in result.captures.items()
+    }
+    pipe = captures.get("aiq.queue", -1)
     return {
         "id": None,
         "entry_slot": slot,
+        "pipe": pipe,
         "local_match_id": i,
         "start_cycle": int(result.start.value[i]),
         "end_cycle": int(result.end.value[i]),
         "duration": int(result.duration.value[i]),
         "status": MatchStatus(result.status.value[i]).name,
-        "captures": {
-            name: _json_value(wf.value[i])
-            for name, wf in result.captures.items()
-        },
+        "captures": captures,
         "stage_timing": stage_timing,
     }
 
 
 def sort_match_key(match):
-    """Sort by traced entry point first, then slot for deterministic ties."""
+    """Sort by traced entry point first, then slot/pipe for deterministic ties."""
     entry_cycle = match["captures"].get("cycle_pcgen_ib")
     if entry_cycle is None:
         entry_cycle = match["start_cycle"]
-    return (int(entry_cycle), match["entry_slot"], match["local_match_id"])
+    return (int(entry_cycle), match["entry_slot"], match["pipe"], match["local_match_id"])
 
 
 def compute_flat_stage_stats(matches):
@@ -534,10 +572,16 @@ def compute_flat_stage_stats(matches):
     return stats
 
 
-def compute_status_stage_counts(matches):
-    """Count terminal stage by match status for timeout/debug triage."""
+def compute_status_stage_counts(matches, filter_pipe=None):
+    """Count terminal stage by match status for timeout/debug triage.
+
+    Args:
+        filter_pipe: if set, only count matches for this pipe.
+    """
     counts = {}
     for match in matches:
+        if filter_pipe is not None and match["pipe"] != filter_pipe:
+            continue
         status = match["status"]
         stage = match["stage_timing"][-1]["stage"] if match["stage_timing"] else "none"
         counts.setdefault(status, {})
@@ -551,7 +595,7 @@ def format_match(result, i, slot):
     start = result.start.value[i]
     end = result.end.value[i]
     dur = result.duration.value[i]
-    lines = [f"  Match #{i} [{status}]  cycles {start}->{end}  dur={dur}"]
+    lines = [f"  Match #{i} [{status}]  slot={slot}  cycles {start}->{end}  dur={dur}"]
 
     # Per-stage timing header
     stage_timing = compute_stage_timing(result, i)
@@ -576,7 +620,8 @@ def format_flat_match(match):
     """Format one flattened match for text output."""
     lines = [
         f"  Match #{match['id']} [{match['status']}]"
-        f"  slot={match['entry_slot']} local={match['local_match_id']}"
+        f"  slot={match['entry_slot']} pipe={match['pipe']}"
+        f"  local={match['local_match_id']}"
         f"  cycles {match['start_cycle']}->{match['end_cycle']}"
         f"  dur={match['duration']}"
     ]
@@ -635,7 +680,7 @@ def main():
 
     matches = []
     for label, result in all_results.items():
-        slot = int(label[-1])
+        slot = int(label[4:])
         for i in range(len(result.start.value)):
             matches.append(build_match_record(result, i, slot))
 
@@ -654,6 +699,7 @@ def main():
         "trace_name": "openc910_inst_lifecycle",
         "layout": "flattened_by_entry_cycle",
         "slots": 3,
+        "pipes": 2,
         "start_cycle": 0,
         "end_cycle": END_CYCLE,
         "status_counts": status_counts,
@@ -666,22 +712,33 @@ def main():
 
     lines = [
         "Trace: openc910_inst_lifecycle",
-        "  Layout: flattened by cycle_pcgen_ib, entry_slot only kept as metadata",
+        "  Layout: flattened by cycle_pcgen_ib, slot/pipe kept as metadata",
         "  Stages: pcgen -> ifu_ib -> id_decode -> ir_rename -> rob_alloc",
-        "          -> is_aiq0 -> rf_pipe0 -> rf_decode -> iu_recv",
+        "          -> is_aiq -> rf_pipe -> rf_decode -> iu_recv",
         "          -> iu_cmplt -> rtu_commit -> rtu_retire",
         f"  Results: {len(matches)} total",
         f"    OK: {status_counts['OK']}, TIMEOUT: {status_counts['TIMEOUT']}, "
         f"REQUIRE_VIOLATED: {status_counts['REQUIRE_VIOLATED']}",
         "",
     ]
+    # Per-pipe breakdown
+    for p in range(2):
+        pm = [m for m in matches if m["pipe"] == p]
+        pok = sum(1 for m in pm if m["status"] == "OK")
+        pto = sum(1 for m in pm if m["status"] == "TIMEOUT")
+        prv = sum(1 for m in pm if m["status"] == "REQUIRE_VIOLATED")
+        lines.append(f"  pipe{p}: {len(pm)} matches (OK={pok} TIMEOUT={pto} REQ_VIOL={prv})")
+    lines.append("")
     for status in ("TIMEOUT", "REQUIRE_VIOLATED"):
         stage_counts = status_stage_counts.get(status, {})
         if not stage_counts:
             continue
-        lines.append(f"  {status} terminal stage counts:")
+        lines.append(f"  {status} terminal stage counts (all pipes):")
         for stage, count in sorted(stage_counts.items(), key=lambda item: (-item[1], item[0])):
-            lines.append(f"    {stage:14s}  {count}")
+            # Show per-pipe breakdown
+            p0 = compute_status_stage_counts(matches, filter_pipe=0).get(status, {}).get(stage, 0)
+            p1 = compute_status_stage_counts(matches, filter_pipe=1).get(status, {}).get(stage, 0)
+            lines.append(f"    {stage:14s}  {count} (p0={p0} p1={p1})")
         lines.append("")
 
     if stage_stats:
