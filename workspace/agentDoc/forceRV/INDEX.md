@@ -16,6 +16,36 @@
 
 ## 2. Progressive Loading Guide
 
+
+### Level 0 — 最小脚本示例
+
+```python
+from riscv.EnvRISCV import EnvRISCV
+from riscv.GenThreadRISCV import GenThreadRISCV
+from base.Sequence import Sequence
+
+class MainSequence(Sequence):
+    def generate(self, **kargs):
+        self.genInstruction("ADD##RISCV")
+        self.genInstruction("SUB##RISCV")
+        self.genInstruction("AND##RISCV")
+        self.genInstruction("OR##RISCV")
+        self.genInstruction("SLL##RISCV")
+        self.genInstruction("SRL##RISCV")
+        self.genInstruction("JAL##RISCV")
+        self.genInstruction("BEQ##RISCV")
+
+        # Gem5 Exit
+        self.genInstruction("ADDI##RISCV", {"rd": 10, "rs1": 0, "simm12": 0})
+        self.genInstruction("M5EXIT##RISCV")
+
+MainSequenceClass = MainSequence
+GenThreadClass = GenThreadRISCV
+EnvClass = EnvRISCV
+```
+
+
+
 ### Level 1 — API 参考（按需查阅）
 使用 [apiDoc/INDEX.md](apiDoc/INDEX.md) 在 User Manual 中定位章节：
 

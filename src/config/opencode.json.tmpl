@@ -123,10 +123,37 @@
       "permission": {
         "skill": {
           "*": "deny",
-          "isg-compile": "allow",
-          "gem5-prescreen": "allow"
+          "isg-compile": "allow"
+        },
+        "task": {
+          "screener": "allow"
         },
         "edit": "allow"
+      }
+    },
+
+    // gem5 预筛选子代理 —— generator 的子代理
+    "screener": {
+      "description": "gem5预筛选子代理 - 运行gem5预筛选并检查证据结果",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/screener.md}",
+      "tools": {
+        "read": true,
+        "grep": true,
+        "glob": true,
+        "skill": true,
+        "bash": true,
+        "edit": false,
+        "write": false,
+        "apply_patch": false
+      },
+      "permission": {
+        "skill": {
+          "*": "deny",
+          "gem5-prescreen": "allow"
+        },
+        "edit": "deny"
       }
     },
 

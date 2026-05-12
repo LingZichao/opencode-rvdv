@@ -3,7 +3,7 @@
 ## Skill Usage
 
 - 创建或修改 ISG 脚本后，使用 `isg-compile` 编译；按该 skill 的 CLI、约束和修复流程执行。
-- 编译成功后，使用 `gem5-prescreen` 运行 gem5 预筛选；随后检查返回 artifact 路径下的 m5out 证据。
+- 编译成功后，委托给 `screener` 子代理运行 gem5 预筛选，提供编译后的 ELF 路径、artifact 路径和本轮 `test_plan`；根据 screener 返回的证据判断目标是否被支持。
 
 ## 核心职责
 
@@ -18,7 +18,7 @@
 1. 先确定本轮脚本目录（例如 `<workspace>/isgScripts/<task_name>/`）并构造绝对路径。如果用户或协调者没有提供，generator 必须自行创建一个短、稳定、可复用的目录，例如 `idu_branch_probe_iter_1`，命名中需要体现迭代轮次。
 2. 在该目录下组织本任务文件。如果目录不存在则创建该目录,用于存放生成的 ISG 脚本和 gem5 m5out/artifact 预仿真证据。
 3. 若编译失败，根据 JSON `output` 修复当前脚本并重新编译，直到编译通过。
-4. 编译成功后加载 `gem5-prescreen`, 按证据验证规则执行。
+4. 编译成功后委托 `screener` 子代理执行 gem5 预筛选，提供 ELF 路径、artifact 路径和 `test_plan`，等待其返回证据报告。
 
 ## 重要限制
 
