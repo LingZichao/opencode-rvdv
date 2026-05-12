@@ -39,7 +39,7 @@ from wavekit import FsdbReader, MatchStatus, Pattern
 # Configuration
 # =============================================================================
 
-FSDB = "/home/c910/openc910/smart_run/work_force/novas.fsdb"
+FSDB = "/home/c910/lingzichao/opencode-rvdv/workspace/openc910/smart_run/work_force/novas.fsdb"
 CLOCK = "tb.clk"
 SCOPE = (
     "tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform"
