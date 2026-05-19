@@ -1,9 +1,28 @@
 # gem5 Debug & Trace Skill
 
-This document covers gem5 debug mode, debug flags, trace output, and how to start gem5 in Docker. Use this as a reference when analyzing gem5 simulation logs to make architectural judgments.
+This document covers gem5 debug mode, debug flags, trace output, and how to run local gem5 for pre-screening. Use this as a reference when analyzing gem5 simulation logs to make architectural judgments.
 
 ---
 
+## Debug Flag Selection Matrix
+
+| Goal | First-pass flags | Evidence to inspect |
+|---|---|---|
+| Instruction stream / target opcode reached | `ExecAll,Faults` | `trace.out`, `stats.txt` |
+| Fault, exception, or m5 exit behavior | `ExecAll,Faults,PseudoInst` | `trace.out`, `simout`, `simerr` |
+| Branch behavior | `ExecAll,Faults,Branch,BTB,RAS` | `trace.out`, branch-related `stats.txt` keys |
+| Load/store, cache, or atomic behavior | `ExecAll,Faults,Cache,LSQ,LSQUnit,LLSC` | `trace.out`, cache/LSQ `stats.txt` keys |
+| Address translation, PMP, or CSR behavior | `ExecAll,Faults,TLB,TLBVerbose,PageTableWalker,PMP,RiscvMisc` | `trace.out`, `simerr` |
+
+Use `ExecAll,Faults` as the normal first pass. If `trace.out` becomes too large, narrow the flags or add `--debug-start` / `--debug-end`.
+
+## Version And Flag Checks
+
+Debug flag names and source line numbers can differ between gem5 versions. Treat source locations in this file as hints from the source snapshot used to write the guide. Before relying on optional, compound, or less common flags, verify them with:
+
+```bash
+./build/RISCV/gem5.debug --debug-help
+```
 
 ## gem5 Debug Flags
 
@@ -141,14 +160,14 @@ The `Exec` family is the most important for instruction-level debugging:
 
 ### RISC-V Specific Flags
 
-All defined with `tags=['riscv isa']` in `arch/riscv/SConscript` and `dev/riscv/SConscript`.
+Common RISC-V-specific flags are often defined with `tags=['riscv isa']` in `arch/riscv/SConscript` and `dev/riscv/SConscript`; verify availability with `--debug-help` for the active gem5 build.
 
 | Flag | Source | Description |
 |---|---|---|
 | `Clint` | `dev/riscv/clint.cc` | Core-local interrupt controller (RISC-V CLINT): tracks PIO read/write, MTIP (machine timer interrupt) post when mtime reaches mtimecmp, MSIP (machine software interrupt) post/clear via msip register |
 | `Plic` | `dev/riscv/plic.cc` | Platform-level interrupt controller (RISC-V PLIC): interrupt post/clear per source, priority/threshold/enable register updates, claim/complete handshake, output propagation with timing |
 | `PMP` | `arch/riscv/pmp.cc` | Physical memory protection: `pmpCheck()` for every access with VA/PA, PMP config/addr register writes, lock bit enforcement, TOR-mode cascade locking |
-| `RiscvMisc` | `arch/riscv/isa.cc:486,681` | All CSR (Control Status Register) access: `readMiscRegNoEffect()` prints CSR name/index/value, `setMiscRegNoEffect()` prints new value being set. High volume ? every CSR read/write. |
+| `RiscvMisc` | `arch/riscv/isa.cc:486,681` | All CSR (Control Status Register) access: `readMiscRegNoEffect()` prints CSR name/index/value, `setMiscRegNoEffect()` prints new value being set. High volume: every CSR read/write. |
 | `VirtIOMMIO` | `dev/riscv/vio_mmio.cc` | VirtIO MMIO transport layer: MMIO read/write (size, offset, value), kick() callback when guest notifies device to process queue descriptors |
 | `Semihosting` | `arch/riscv/semihosting.cc` | RISC-V semihosting: call32/call64 dispatch (operation + args, return code), ebreak semihosting detection (prev/next instruction validation) |
 | `LupioBLK/IPI/PIC/RNG/RTC/TMR/TTY/SYS` | `dev/lupio/SConscript` | LupIO RISC-V device family (block, IPI, PIC, RNG, RTC, timer, TTY, SYS). Used in practice with `USE_RISCV_ISA` guard. |
@@ -196,7 +215,7 @@ All defined with `tags=['riscv isa']` in `arch/riscv/SConscript` and `dev/riscv/
 
 ### Special Flag: `All`
 
-`All` enables every debug flag. Use with caution ? produces massive output. Always combine with `--debug-start`/`--debug-end` or a narrow `--debug-activate`.
+`All` enables every debug flag. Use with caution: it produces massive output. Always combine with `--debug-start`/`--debug-end` or a narrow `--debug-activate`.
 
 ---
 
@@ -254,7 +273,7 @@ Debug output is writen to the file specified by `--debug-file`. If not specified
 
 ## m5out Simulation Output Files
 
-After simulation, `m5out/<task_id>/` contains:
+After simulation with `--outdir=<artifact_path>`, `<artifact_path>/` contains:
 
 | File | Description |
 |---|---|
@@ -297,9 +316,7 @@ Key metrics for architectural analysis:
 
 ### 1. Trace instruction execution
 ```bash
-docker exec -w /workspaces/gem5 compassionate_jennings \
-  ./quickstart_fs_c910.sh -- --debug-flags=Exec \
-  --debug-file=trace.txt --debug-start=0 --debug-end=100000
+./build/RISCV/gem5.debug --outdir=<artifact_path> --debug-flags=Exec --debug-file=trace.txt --debug-start=0 --debug-end=100000 config/riscv/fs_bare_metal.py --bare-metal-elf <file>.ELF --mem-start=0x0
 ```
 
 ### 2. Debug pipeline stalls (O3 CPU)
@@ -349,10 +366,7 @@ docker exec -w /workspaces/gem5 compassionate_jennings \
 
 ### 11. Comprehensive RISC-V FS debugging
 ```bash
-docker exec -w /workspaces/gem5 compassionate_jennings \
-  ./quickstart_fs_c910.sh --outdir m5out/debug_full -- \
-  --debug-flags=Exec,TLB,PMP,Interrupt,Faults,Clint,Plic,RiscvMisc \
-  --debug-file=full_trace.txt --debug-start=0 --debug-end=500000
+./build/RISCV/gem5.debug --outdir=<artifact_path> --debug-flags=Exec,TLB,PMP,Interrupt,Faults,Clint,Plic,RiscvMisc --debug-file=full_trace.txt --debug-start=0 --debug-end=500000 config/riscv/fs_bare_metal.py --bare-metal-elf <file>.ELF --mem-start=0x0
 ```
 
 ### 12. Find what flag produced specific output
@@ -372,14 +386,14 @@ All Exec flags (except ExecFaulting) flow through `src/cpu/exetrace.cc`:
 
 | Flag | Source File | Trigger Condition |
 |---|---|---|
-| **ExecEnable** | `cpu/exetrace.hh:93` | Checked in `getInstRecord()`. If OFF, returns NULL ? **no tracing at all**. Master gate. |
-| **ExecUser** | `cpu/exetrace.cc:66-67` | If ON + thread in user mode ? print. If OFF + user mode ? skip. Filters user-mode traces. |
-| **ExecKernel** | `cpu/exetrace.cc:68-69` | If ON + thread in kernel mode ? print. If OFF + kernel mode ? skip. Filters kernel-mode traces. |
+| **ExecEnable** | `cpu/exetrace.hh:93` | Checked in `getInstRecord()`. If OFF, returns NULL -> **no tracing at all**. Master gate. |
+| **ExecUser** | `cpu/exetrace.cc:66-67` | If ON + thread in user mode -> print. If OFF + user mode -> skip. Filters user-mode traces. |
+| **ExecKernel** | `cpu/exetrace.cc:68-69` | If ON + thread in kernel mode -> print. If OFF + kernel mode -> skip. Filters kernel-mode traces. |
 | **ExecAsid** | `cpu/exetrace.cc:71-74` | Prints `A<N>` prefix with ASID from `thread->getExecutingAsid()`. Always checked. |
 | **ExecThread** | `cpu/exetrace.cc:76-77` | Prints `T<N> : ` prefix with `thread->threadId()`. Always checked. |
 | **ExecSymbol** | `cpu/exetrace.cc:83-91` | Looks up PC in `debugSymbolTable`. Prints `@func` or `@func+offset`. Skipped in FS user-mode. |
 | **ExecOpClass** | `cpu/exetrace.cc:111-113` | Prints op class (IntAlu/MemRead/FloatAdd/...) when instruction executed (`ran=true`). |
-| **ExecResult** | `cpu/exetrace.cc:115-129` | Prints `D=<value>`. If predicated-false ? `Predicated False`. Handles Int/FP/Vector. |
+| **ExecResult** | `cpu/exetrace.cc:115-129` | Prints `D=<value>`. If predicated-false -> `Predicated False`. Handles Int/FP/Vector. |
 | **ExecEffAddr** | `cpu/exetrace.cc:131-132` | Prints `A=<hex>` when `getMemValid()` is true (memory instruction executed). |
 | **ExecFetchSeq** | `cpu/exetrace.cc:134-135` | Prints `FetchSeq=<N>`. Set by O3 commit (commit.cc:1232) and Minor execute (decode.cc:121). |
 | **ExecCPSeq** | `cpu/exetrace.cc:137-138` | Prints `CPSeq=<N>`. Set by O3 commit (commit.cc:1233) and Minor execute (execute.cc:882). |
@@ -387,7 +401,7 @@ All Exec flags (except ExecFaulting) flow through `src/cpu/exetrace.cc`:
 | **ExecMicro** | `cpu/exetrace.cc:175-177` | If ON: each micro-op gets its own trace line. If OFF: micro-ops skipped (except last). |
 | **ExecMacro** | `cpu/exetrace.cc:168-174` | If ON + ExecMicro ON: prints macro-op header at first micro-op. If ExecMicro OFF: prints macro-op summary at last micro-op. |
 | **ExecFaulting** | `o3/commit.cc:1209`, `minor/execute.cc:982`, `simple/base.cc:264` | If ON: preserves trace data for faulting instructions and dumps them. If OFF: deletes trace data on fault. **TARMAC tracer auto-enables this.** |
-| **ExecRegDelta** | `arch/x86/nativetrace.cc:131`, `arch/arm/nativetrace.cc:157` | Not in cpu/ ? used by native execution tracers for register mismatch detection. |
+| **ExecRegDelta** | `arch/x86/nativetrace.cc:131`, `arch/arm/nativetrace.cc:157` | Not in cpu/ -> used by native execution tracers for register mismatch detection. |
 
 **Exec trace pipeline per CPU model:**
 
@@ -400,10 +414,10 @@ All Exec flags (except ExecFaulting) flow through `src/cpu/exetrace.cc`:
 
 ### O3 CPU Pipeline Flag Triggers
 
-#### Fetch (116 DPRINTF sites ? `cpu/o3/fetch.cc`, `cpu/minor/fetch1.cc`, `cpu/minor/fetch2.cc`, `cpu/pred/2bit_local.cc`)
+#### Fetch (116 DPRINTF sites -> `cpu/o3/fetch.cc`, `cpu/minor/fetch1.cc`, `cpu/minor/fetch2.cc`, `cpu/pred/2bit_local.cc`)
 
 Triggers on:
-- **State transitions**: blocked ? squashing ? running ? waiting (cache response / ITLB / trap / quiesce / I-cache retry)
+- **State transitions**: blocked -> squashing -> running -> waiting (cache response / ITLB / trap / quiesce / I-cache retry)
 - **ICache/ITLB**: fetching cache line for addr, doing I-cache access, out of MSHRs, translation fault
 - **Branch handling**: branch detected at PC, predicted target, unconditional/conditional
 - **Squash**: squashing from decode/commit, setting PC, squashing outstanding I-cache miss
@@ -411,7 +425,7 @@ Triggers on:
 - **Queue management**: fetch queue entry created, sending to decode, adding instructions to decode queue
 - **Drain/idle**: no more threads, waiting for drain, no active thread
 
-#### Decode (65 DPRINTF sites ? `cpu/o3/decode.cc`, ISA decoder files)
+#### Decode (65 DPRINTF sites -> `cpu/o3/decode.cc`, ISA decoder files)
 
 O3 triggers on:
 - **Stall/block**: stall from Rename, blocking/unblocking, skid buffer insertion
@@ -421,17 +435,17 @@ O3 triggers on:
 
 ISA decoder files trigger on: decoded instruction type, prefix bytes, opcode bytes, modrm/SIB/displacement/immediate collection.
 
-#### Rename (54 DPRINTF sites ? `cpu/o3/rename.cc`, `cpu/o3/rename_map.cc`)
+#### Rename (54 DPRINTF sites -> `cpu/o3/rename.cc`, `cpu/o3/rename_map.cc`)
 
 Triggers on:
 - **Squash**: squashing instructions, freeing phys regs of misspeculated instructions
-- **Resource limits**: cannot rename ? no free LQ/SQ/ROB/IQ entries; stall due to ROB/IQ/LSQ full
+- **Resource limits**: cannot rename -> no free LQ/SQ/ROB/IQ entries; stall due to ROB/IQ/LSQ full
 - **Serialization**: serialize before/after instruction encountered
 - **History**: removing history entry with seq num, removing committed inst from history buffer
 - **Register mapping**: renamed reg \<arch\> to physical reg \<idx\>, old mapping was \<old\>
 - **Processing**: processing [tid], sending to IEW, processing instruction [lli] with PC
 
-#### IEW (66 DPRINTF sites ? `cpu/o3/iew.cc`, `cpu/o3/regfile.hh`)
+#### IEW (66 DPRINTF sites -> `cpu/o3/iew.cc`, `cpu/o3/regfile.hh`)
 
 Triggers on:
 - **Squash**: squashing all instructions, memory violation squashing violator+younger
@@ -442,7 +456,7 @@ Triggers on:
 - **Stall**: stall from Commit, stall because IQ full, ROB still squashing, bandwidth full
 - **RegFile**: access to int/float/vector register, has data/value, setting register to value
 
-#### Commit (34 DPRINTF sites ? `cpu/o3/commit.cc`)
+#### Commit (34 DPRINTF sites -> `cpu/o3/commit.cc`)
 
 Triggers on:
 - **Squash**: squashing due to branch mispred/order violation, redirecting to PC, trap/TC squash
@@ -452,18 +466,18 @@ Triggers on:
 - **ROB state**: ROB has N insts and N free entries; retiring squashed inst; inserting PC into ROB
 - **Drain/flow**: generating trap event, TC squash event, pending interrupt handled
 
-#### IQ (28 DPRINTF sites ? `cpu/o3/inst_queue.cc`)
+#### IQ (28 DPRINTF sites -> `cpu/o3/inst_queue.cc`)
 
 Triggers on:
 - Adding instruction [sn] PC to IQ (also non-speculative)
 - Attempting to schedule ready instructions; not able to schedule any
 - Issuing instruction PC to FU; completing mem instruction PC
 - Waking dependents of completed instruction; dependent instruction PC ready
-- Rescheduling mem inst (blocked ? unblocked); marking non-speculative as ready to issue
+- Rescheduling mem inst (blocked -> unblocked); marking non-speculative as ready to issue
 - Squashing instructions in IQ until seq num
 - IQ sharing policy set (Partitioned/Threshold)
 
-#### ROB (11 DPRINTF sites ? `cpu/o3/rob.cc`)
+#### ROB (11 DPRINTF sites -> `cpu/o3/rob.cc`)
 
 Triggers on:
 - Adding inst PC to ROB; now has N instructions
@@ -471,7 +485,7 @@ Triggers on:
 - Squashing instructions until [sn]; done squashing; starting to squash within ROB
 - Reached head of instruction list while squashing; does not need to squash (empty)
 
-#### LSQ / LSQUnit (58 DPRINTF sites ? `cpu/o3/lsq.cc`, `cpu/o3/lsq_unit.cc`)
+#### LSQ / LSQUnit (58 DPRINTF sites -> `cpu/o3/lsq.cc`, `cpu/o3/lsq_unit.cc`)
 
 **LSQ** triggers on:
 - LSQ sharing policy set to Dynamic/Threshold/Partitioned
@@ -488,7 +502,7 @@ Triggers on:
 - **Squash**: squashing until [sn]; load/store instruction squashed
 - **Stall**: unstalling/stalling store; cache blocked; strictly ordered load
 
-#### MemDepUnit (27 DPRINTF sites ? `cpu/o3/mem_dep_unit.cc`)
+#### MemDepUnit (27 DPRINTF sites -> `cpu/o3/mem_dep_unit.cc`)
 
 Triggers on:
 - Inserted load/store barrier \<type\> SN; outstanding barrier count
@@ -499,11 +513,11 @@ Triggers on:
 - Waking up dependent inst [sn] PC
 - Squashing inst [sn]; passing violating PCs to store sets
 
-#### StoreSet (17 DPRINTF sites ? `cpu/o3/store_set.cc`)
+#### StoreSet (17 DPRINTF sites -> `cpu/o3/store_set.cc`)
 
 Triggers on:
 - Neither load nor store had valid store set; load/store had valid store set
-- Load/store had smaller store set ? merging them
+- Load/store had smaller store set -> merging them
 - Wiping predictor state because N ld/st executed
 - Store updated LFST, SSID; inst has no SSID; inst with SSID had no LFST / had LFST entry
 - Store invalidated itself in LFST
@@ -522,7 +536,7 @@ Triggers on:
 
 ### SimpleCPU / MinorCPU Flag Triggers
 
-#### SimpleCPU (22 DPRINTF sites ? `cpu/simple/timing.cc`, `cpu/simple/atomic.cc`)
+#### SimpleCPU (22 DPRINTF sites -> `cpu/simple/timing.cc`, `cpu/simple/atomic.cc`)
 
 Triggers on:
 - Resume/ActivateContext/SuspendContext
@@ -531,14 +545,14 @@ Triggers on:
 - Complete ICache Fetch; received fetch response
 - Received load/store response; received snoop pkt for addr
 
-#### MinorCPU (7 DPRINTF sites ? `cpu/minor/cpu.cc`, `cpu/minor/pipeline.cc`)
+#### MinorCPU (7 DPRINTF sites -> `cpu/minor/cpu.cc`, `cpu/minor/pipeline.cc`)
 
 Triggers on:
 - Startup; switchOut; takeOverFrom
 - ActivateContext/SuspendContext thread
 - Draining pipeline by halting inst fetches; pipeline undrained stages state
 
-#### MinorExecute (48 DPRINTF sites ? `cpu/minor/execute.cc`)
+#### MinorExecute (48 DPRINTF sites -> `cpu/minor/execute.cc`)
 
 Triggers on:
 - ExecContext setting PC; initiating memRef inst; fault on memory inst
@@ -549,7 +563,7 @@ Triggers on:
 - Trying to commit mem response; Discarding mem inst (wrong stream)
 - Committing no cost inst; Completed inst; Reached inst issue/commit limit
 
-#### MinorMem (55 DPRINTF sites ? `cpu/minor/lsq.cc`, `cpu/minor/execute.cc`)
+#### MinorMem (55 DPRINTF sites -> `cpu/minor/lsq.cc`, `cpu/minor/execute.cc`)
 
 Triggers on:
 - Moving barrier out of store buffer; Pushing store into store buffer; Forwarding from store buffer
@@ -562,7 +576,7 @@ Triggers on:
 
 ### Branch Predictor Flag Triggers
 
-#### Branch (37 DPRINTF sites ? `cpu/pred/bpred_unit.cc`, `cpu/minor/fetch2.cc`, `cpu/minor/execute.cc`)
+#### Branch (37 DPRINTF sites -> `cpu/pred/bpred_unit.cc`, `cpu/minor/fetch2.cc`, `cpu/minor/execute.cc`)
 
 Triggers on:
 - History entry added; predHist.size
@@ -574,11 +588,11 @@ Triggers on:
 - Mispredicted: \<branch type\>, PC
 - Minor: unpredicted branch / predicted correctly / mis-predicted / wrong target
 
-#### BTB (1 DPRINTF site ? `cpu/pred/simple_btb.cc:56`)
+#### BTB (1 DPRINTF site -> `cpu/pred/simple_btb.cc:56`)
 
 Triggers on: "BTB: Creating BTB object" (construction only).
 
-#### RAS (11 DPRINTF sites ? `cpu/pred/ras.cc`)
+#### RAS (11 DPRINTF sites -> `cpu/pred/ras.cc`)
 
 Triggers on:
 - Create RAS stacks; RAS Reset
@@ -589,7 +603,7 @@ Triggers on:
 
 ### Memory System Flag Triggers
 
-#### Cache (43 DPRINTF sites ? `mem/cache/base.cc`, `mem/cache/cache.cc`)
+#### Cache (43 DPRINTF sites -> `mem/cache/base.cc`, `mem/cache/cache.cc`)
 
 Triggers on:
 - Packet hit/miss in cache with address, command type, block state
@@ -600,7 +614,7 @@ Triggers on:
 - Temporary block usage; blocking/unblocking for ordering
 - Snoop hits/misses; deferred snoops; squash of lower-cache packets on writequeue
 
-#### CacheComp (11 DPRINTF sites ? `mem/cache/compressors/base.cc`, `*_compressor*`)
+#### CacheComp (11 DPRINTF sites -> `mem/cache/compressors/base.cc`, `*_compressor*`)
 
 Triggers on:
 - Compression of cache line (original vs compressed bit count)
@@ -609,22 +623,22 @@ Triggers on:
 - Selection of best compressor from multiple options
 - Co-allocation of compressed entries in tags
 
-#### CachePort (6 DPRINTF sites ? `mem/cache/base.cc`, `mem/cache/base.hh`)
+#### CachePort (6 DPRINTF sites -> `mem/cache/base.cc`, `mem/cache/base.hh`)
 
 Triggers on:
 - Scheduling send events at tick; waiting for snoop response before sending
 - Blocking new requests (port full); descheduling retries (port still blocked)
 - Accepting new requests again (port unblocked); sending retry notifications
 
-#### CacheRepl (2 DPRINTF sites ? `mem/cache/base.cc:1055,1660`)
+#### CacheRepl (2 DPRINTF sites -> `mem/cache/base.cc:1055,1660`)
 
 Triggers on: replacement victim chosen for eviction (during data access and tag lookup), shows victim block details.
 
-#### CacheTags (1 DPRINTF site ? `mem/cache/cache.cc:420`)
+#### CacheTags (1 DPRINTF site -> `mem/cache/cache.cc:420`)
 
 Triggers on: cache dumps its current tag state (init/debug inspection).
 
-#### CacheVerbose (12 DPRINTF sites ? `mem/cache/base.cc`, `mem/cache/cache.cc`)
+#### CacheVerbose (12 DPRINTF sites -> `mem/cache/base.cc`, `mem/cache/cache.cc`)
 
 Triggers on:
 - Creation of response packets; sending response packets
@@ -632,15 +646,15 @@ Triggers on:
 - Packet flow through eviction; timing write operations
 - Invalidation handling; delaying packets for ordering; MSHR target processing
 
-#### MSHR (10 DPRINTF sites ? `mem/cache/mshr.cc`, `mem/cache/mshr_queue.cc`)
+#### MSHR (10 DPRINTF sites -> `mem/cache/mshr.cc`, `mem/cache/mshr_queue.cc`)
 
 Triggers on:
 - Allocating new MSHR (shows usage count); deallocating MSHR and its targets
 - Adding new target to MSHR with details
-- Command type upgrades: UpgradeReq?ReadExReq, SCUpgradeReq?SCUpgradeFailReq
+- Command type upgrades: UpgradeReq->ReadExReq, SCUpgradeReq->SCUpgradeFailReq
 - Dumping target state after allocation
 
-#### HWPrefetch (40 DPRINTF sites ? `mem/cache/prefetch/queued.cc`, `stride.cc`, `bop.cc`, etc.)
+#### HWPrefetch (40 DPRINTF sites -> `mem/cache/prefetch/queued.cc`, `stride.cc`, `bop.cc`, etc.)
 
 Triggers on:
 - Stride prefetcher: hits/misses in stride table
@@ -651,11 +665,11 @@ Triggers on:
 - DCPT/SignaturePath/SMS/STeMS: PC-less request ignoration, prefetch queuing
 - Ruby prefetcher proxy: issuing/completing/aborting prefetch requests
 
-#### HWPrefetchQueue (1 DPRINTF site ? `mem/cache/prefetch/queued.cc:136`)
+#### HWPrefetchQueue (1 DPRINTF site -> `mem/cache/prefetch/queued.cc:136`)
 
 Triggers on: prefetch request dequeued and sent for issue (shows VA and PA).
 
-#### DRAM (24 DPRINTF sites ? `mem/dram_interface.cc`)
+#### DRAM (24 DPRINTF sites -> `mem/dram_interface.cc`)
 
 Triggers on:
 - Packet vs bank/row state check: row buffer hit/miss, seamless hits, prepped hits
@@ -664,24 +678,24 @@ Triggers on:
 - DRAM interface setup, capacity, address decoding (rank/bank/row)
 - Read/write queue occupancy; self-refresh wakeup during drain; refresh operations
 
-#### DRAMPower (10 DPRINTF sites ? `mem/dram_interface.cc`)
+#### DRAMPower (10 DPRINTF sites -> `mem/dram_interface.cc`)
 
 Triggers on: ACT, PRE, PREA, REF, PDN_F_ACT, PDN_F_PRE, SREN, PUP_ACT, PUP_PRE, SREX, RD, WR commands in CSV format: `<tick>,<command>,<rank>,<bank>`.
 
-#### DRAMState (12 DPRINTF sites ? `mem/dram_interface.cc`)
+#### DRAMState (12 DPRINTF sites -> `mem/dram_interface.cc`)
 
 Triggers on:
 - Rank unavailability; self-refresh entry/exit
-- Power state transitions: active ? precharged
+- Power state transitions: active -> precharged
 - Sleep state tracking; refresh duration
 - Switching to power-down after refresh; all-banks-precharged state
 - Bypassing refresh for power state transition; scheduling power/wakeup events
 
-#### NVM (19 DPRINTF sites ? `mem/nvm_interface.cc`)
+#### NVM (19 DPRINTF sites -> `mem/nvm_interface.cc`)
 
 Triggers on: NVM rank creation, address decoding, bank/rank availability, seamless buffer hits, read timing, controller restart, timing accesses, response readiness, bus turnaround, bus utilization.
 
-#### MemCtrl (60+ DPRINTF sites ? `mem/mem_ctrl.cc`, `mem/hetero_mem_ctrl.cc`, `mem/hbm_ctrl.cc`)
+#### MemCtrl (60+ DPRINTF sites -> `mem/mem_ctrl.cc`, `mem/hetero_mem_ctrl.cc`, `mem/hbm_ctrl.cc`)
 
 Triggers on:
 - Controller setup; receiving timing (recvTimingReq) and atomic requests
@@ -691,68 +705,68 @@ Triggers on:
 - Request-to-rank mapping: free vs busy rank
 - Response delivery; burst completion
 
-#### MemoryAccess (5 DPRINTF sites ? `mem/abstract_mem.cc`, GPU coalescer)
+#### MemoryAccess (5 DPRINTF sites -> `mem/abstract_mem.cc`, GPU coalescer)
 
 Triggers on: read/write access notifications (with data hex dump for reads), cache responding to non-responding address, CleanEvict, write coalescing.
 
-#### PacketQueue (3 DPRINTF sites ? `mem/packet_queue.cc`)
+#### PacketQueue (3 DPRINTF sites -> `mem/packet_queue.cc`)
 
 Triggers on: receiving retry from peer, scheduling packet for sending (command type, address, size, tick, ordering), postponing send waiting for retry.
 
 ### TLB / MMU Flag Triggers (RISC-V focused)
 
-The RISC-V MMU class (`arch/riscv/mmu.hh`) delegates all translation work to the TLB ? there are no DPRINTF calls in the MMU itself. Use `TLB`, `TLBVerbose`, and `PageTableWalker` for RISC-V address translation debugging.
+The RISC-V MMU class (`arch/riscv/mmu.hh`) delegates all translation work to the TLB -> there are no DPRINTF calls in the MMU itself. Use `TLB`, `TLBVerbose`, and `PageTableWalker` for RISC-V address translation debugging.
 
 #### TLB (15 DPRINTF sites in `arch/riscv/tlb.cc`)
 
 Triggers on:
 
 **Insert/Remove/Flush:**
-- `TLB::insert()`: `"insert(vpn=%#x, asid=%#x, key=%#x): vaddr=%#x paddr=%#x pte=%#x size=%#x"` ? new TLB entry inserted with full mapping details
-- `TLB::demapPage()` (SFENCE.VMA): `"flush(vaddr=%#x, asid=%#x)"` ? partial TLB flush. If both args are zero: `"Flushing all TLB entries"` (full flush)
-- `TLB::flushAll()`: `"flushAll()"` ? unconditional full TLB flush
-- `TLB::remove(idx)`: `"remove(vpn=%#x, asid=%#x): ppn=%#x pte=%#x size=%#x"` ? entry eviction
+- `TLB::insert()`: `"insert(vpn=%#x, asid=%#x, key=%#x): vaddr=%#x paddr=%#x pte=%#x size=%#x"` -> new TLB entry inserted with full mapping details
+- `TLB::demapPage()` (SFENCE.VMA): `"flush(vaddr=%#x, asid=%#x)"` -> partial TLB flush. If both args are zero: `"Flushing all TLB entries"` (full flush)
+- `TLB::flushAll()`: `"flushAll()"` -> unconditional full TLB flush
+- `TLB::remove(idx)`: `"remove(vpn=%#x, asid=%#x): ppn=%#x pte=%#x size=%#x"` -> entry eviction
 
 **Permission Checks (all raise a page fault):**
-- HLVX with no exec permission ? `"HLVX with no exec perm, raising PF"`
-- No read permission (and MXR not applicable) ? `"PTE has no read perm, raising PF"`
-- No write permission ? `"PTE has no write perm, raising PF"`
-- No exec permission ? `"PTE has no exec perm, raising PF"`
-- User mode but PTE not user-accessible (U bit not set) ? `"PTE not user accessible, raising PF"`
-- Supervisor mode but PTE only user-accessible (U set, SUM=0 or executing) ? `"PTE only user accessible, raising PF"`
+- HLVX with no exec permission -> `"HLVX with no exec perm, raising PF"`
+- No read permission (and MXR not applicable) -> `"PTE has no read perm, raising PF"`
+- No write permission -> `"PTE has no write perm, raising PF"`
+- No exec permission -> `"PTE has no exec perm, raising PF"`
+- User mode but PTE not user-accessible (U bit not set) -> `"PTE not user accessible, raising PF"`
+- Supervisor mode but PTE only user-accessible (U set, SUM=0 or executing) -> `"PTE only user accessible, raising PF"`
 
 **Other:**
-- Dirty bit not set on a write ? `"Dirty bit not set, repeating PT walk"` ? triggers page table walk to set dirty bit
-- `translateFunctional()` done ? `"Translated (functional) %#x -> %#x."`
+- Dirty bit not set on a write -> `"Dirty bit not set, repeating PT walk"` -> triggers page table walk to set dirty bit
+- `translateFunctional()` done -> `"Translated (functional) %#x -> %#x."`
 
 #### TLBVerbose (3 DPRINTF sites in `arch/riscv/tlb.cc`)
 
 Triggers on:
-- **Every TLB lookup** (`TLB::lookup()`): `"lookup(vpn=%#x, asid=%#x, key=%#x): <hit|miss> ppn=%#x (%#x) <hidden| >"` ? shows hit/miss, PPN, page size, and whether it was a hidden PTW lookup
-- **MXR bit bypass**: `"MXR bit on, load from exec page success"` ? MXR allows reading from execute-only pages (hardware enforcement of MXR in RISC-V)
-- **Successful translation** (`TLB::translate()`): `"translate(vaddr=%#x, vpn=%#x, asid=%#x): %#x"` ? final VA?PA resolution
+- **Every TLB lookup** (`TLB::lookup()`): `"lookup(vpn=%#x, asid=%#x, key=%#x): <hit|miss> ppn=%#x (%#x) <hidden| >"` -> shows hit/miss, PPN, page size, and whether it was a hidden PTW lookup
+- **MXR bit bypass**: `"MXR bit on, load from exec page success"` -> MXR allows reading from execute-only pages (hardware enforcement of MXR in RISC-V)
+- **Successful translation** (`TLB::translate()`): `"translate(vaddr=%#x, vpn=%#x, asid=%#x): %#x"` -> final VA->PA resolution
 
 #### PageTableWalker (8 DPRINTF sites in `arch/riscv/pagetable_walker.cc`)
 
 Triggers on:
-- Concurrent walks queued: `"Walks in progress: %d"` ? existing walk still in progress, new request queued
+- Concurrent walks queued: `"Walks in progress: %d"` -> existing walk still in progress, new request queued
 - Walk squashed (branch mispredict / instruction squash): `"Squashing table walk for address %#x"`
-- Stage 1 walk ? each level: `"Got level%d PTE: %#x"` ? PTE value read at current walk level
+- Stage 1 walk -> each level: `"Got level%d PTE: %#x"` -> PTE value read at current walk level
 - Stage 1 leaf found: `"#1 leaf node at level %d, with vpn %#x"`
-- SVNAPOT encoding error: `"SVNAPOT PTE has wrong encoding, raising PF"` ? N bit set but PPN0 encoding invalid
-- Stage 2 (G-stage / hypervisor) ? each level: `"[GSTAGE]: Got level%d PTE: %#x"`
+- SVNAPOT encoding error: `"SVNAPOT PTE has wrong encoding, raising PF"` -> N bit set but PPN0 encoding invalid
+- Stage 2 (G-stage / hypervisor) -> each level: `"[GSTAGE]: Got level%d PTE: %#x"`
 - Stage 2 leaf found: `"[GSTAGE] #1 leaf node at level %d, with vpn %#x"`
 
-**RISC-V page table walk levels:** Sv39 uses 3 levels (level 2?1?0), Sv48 uses 4 levels (level 3?2?1?0). The walker starts at the highest level and steps down to find a leaf PTE or raise a page fault.
+**RISC-V page table walk levels:** Sv39 uses 3 levels (level 2->1->0), Sv48 uses 4 levels (level 3->2->1->0). The walker starts at the highest level and steps down to find a leaf PTE or raise a page fault.
 
 #### LLSC / RISC-V Reservation Handling (6 DPRINTF sites in `arch/riscv/isa.cc`)
 
 Triggers on:
-- Snoop hits locked address: `"Locked snoop on address %x."` ? cache coherence snoop on reserved address; reservation is cleared
-- Load-Reserved (LR) executed: `"[cid:%d]: Reserved address %x."` ? sets the reservation
-- Store-Conditional (SC) starts: `"[cid:%d]: load_reservation_addrs empty? %s."` ? checks if reservation still exists
-- SC address check: `"[cid:%d]: addr = %x."` / `"[cid:%d]: last locked addr = %x."` ? compares SC address against reserved address
-- SC success: `"[cid:%d]: SC success! Current locked addr = %x."` ? store succeeded atomically
+- Snoop hits locked address: `"Locked snoop on address %x."` -> cache coherence snoop on reserved address; reservation is cleared
+- Load-Reserved (LR) executed: `"[cid:%d]: Reserved address %x."` -> sets the reservation
+- Store-Conditional (SC) starts: `"[cid:%d]: load_reservation_addrs empty? %s."` -> checks if reservation still exists
+- SC address check: `"[cid:%d]: addr = %x."` / `"[cid:%d]: last locked addr = %x."` -> compares SC address against reserved address
+- SC success: `"[cid:%d]: SC success! Current locked addr = %x."` -> store succeeded atomically
 
 **Key RISC-V LR/SC guarantee:** Reservation is per-context (`cid`). Snoops to the reserved cache line clear the reservation. An SC only succeeds if no intervening snoop or context switch cleared the reservation since the LR.
 
@@ -761,7 +775,7 @@ Triggers on:
 | Flag | Key Files | Trigger Condition Summary |
 |---|---|---|
 | **Interrupt** | `arch/riscv/interrupts.cc:223,234,245`, `dev/*`, `cpu/o3/cpu.cc` | RISC-V: interrupt post/clear/clearAll on local interrupt pending register. Interrupt assertion/clearance, handling, pending detection |
-| **Faults** | `arch/riscv/faults.cc:64` (DPRINTFS), ISA fault handlers | RISC-V: `RiscvFault::invoke()` ? central dispatch for ALL faults/exceptions/interrupts. Fault name + exception code + PC at time of trap. Sets cause/epc/tval CSRs, redirects to trap vector |
+| **Faults** | `arch/riscv/faults.cc:64` (DPRINTFS), ISA fault handlers | RISC-V: `RiscvFault::invoke()` -> central dispatch for ALL faults/exceptions/interrupts. Fault name + exception code + PC at time of trap. Sets cause/epc/tval CSRs, redirects to trap vector |
 | **Loader** | `sim/system.cc`, `base/loader/*` | ELF loading: segment placement, entry point, symbol table loading |
 | **PseudoInst** | `sim/pseudo_inst.cc` | m5 pseudo-instruction execution (m5exit, m5writefile, m5checkpoint, etc.) |
 | **SyscallBase** | `sim/syscall_emul.cc` | System call dispatch: syscall number, arguments, return value |
@@ -784,51 +798,51 @@ Triggers on:
 
 ### RISC-V Specific Flag Triggers (Detailed)
 
-#### Clint (5 DPRINTF sites ? `dev/riscv/clint.cc`)
+#### Clint (5 DPRINTF sites -> `dev/riscv/clint.cc`)
 
 CLINT is the RISC-V Core-Local Interrupt Controller. It generates both software interrupts (MSIP) and timer interrupts (MTIP).
 
 | Trigger Condition | Message | Line |
 |---|---|---|
-| `raiseInterruptPin()` ? mtime == mtimecmp (timer match) | `"MTIP posted - thread: %d, mtime: %d, mtimecmp: %d"` | 95-97 |
+| `raiseInterruptPin()` -> mtime == mtimecmp (timer match) | `"MTIP posted - thread: %d, mtime: %d, mtimecmp: %d"` | 95-97 |
 | Any CLINT PIO read | `"Read request - addr: %#x, size: %#x, atomic:%d"` | 165-167 |
 | Any CLINT PIO write | `"Write request - addr: %#x, size: %#x"` | 185-187 |
-| `updateMSIP()` ? msip becomes non-zero (SW interrupt set) | `"MSIP posted - thread: %d"` | 243 |
-| `updateMSIP()` ? msip becomes zero (SW interrupt cleared) | `"MSIP cleared - thread: %d"` | 247 |
+| `updateMSIP()` -> msip becomes non-zero (SW interrupt set) | `"MSIP posted - thread: %d"` | 243 |
+| `updateMSIP()` -> msip becomes zero (SW interrupt cleared) | `"MSIP cleared - thread: %d"` | 247 |
 
-**Architecture insight:** On each RTC tick, `raiseInterruptPin()` compares mtime against mtimecmp. When mtime reaches (or exceeds) mtimecmp, MTIP is asserted and the hart gets a timer interrupt. MSIP is software-controlled ? other harts (or the same hart) write to memory-mapped MSIP registers to trigger inter-processor interrupts (IPI).
+**Architecture insight:** On each RTC tick, `raiseInterruptPin()` compares mtime against mtimecmp. When mtime reaches (or exceeds) mtimecmp, MTIP is asserted and the hart gets a timer interrupt. MSIP is software-controlled -> other harts (or the same hart) write to memory-mapped MSIP registers to trigger inter-processor interrupts (IPI).
 
-#### Plic (16 DPRINTF sites ? `dev/riscv/plic.cc`)
+#### Plic (16 DPRINTF sites -> `dev/riscv/plic.cc`)
 
 PLIC is the RISC-V Platform-Level Interrupt Controller. It collects external interrupts from platform devices and routes them to harts.
 
 **Lifecycle of a PLIC interrupt:**
 
-1. **Post/Clear** ? device asserts/clears an interrupt source line
+1. **Post/Clear** -> device asserts/clears an interrupt source line
    - `"Int post request - source: %#x, current priority: %#x"` (line 95)
    - `"Int clear request - source: %#x, current priority: %#x"` (line 123)
 
-2. **Configuration via PIO** ? software programs priority, enable, threshold registers
+2. **Configuration via PIO** -> software programs priority, enable, threshold registers
    - `"Read request - addr: %#x, size: %#x, atomic:%d"` (line 136)
    - `"Write request - addr: %#x, size: %#x"` (line 156)
    - `"Priority updated - src: %d, val: %d"` (line 318)
    - `"Enable updated - context: %d, src32: %d, val: %#x"` (line 336)
    - `"Threshold updated - context: %d, val: %d"` (line 347)
 
-3. **Claim/Complete** ? hart claims the highest-priority pending interrupt, then signals completion
+3. **Claim/Complete** -> hart claims the highest-priority pending interrupt, then signals completion
    - `"Claim success - context: %d, interrupt ID: %d"` (line 364)
    - `"Claim already cleared - context: %d, interrupt ID: %d"` (race condition, line 371)
    - `"Complete - context: %d, interrupt ID: %d"` (line 394)
 
-4. **Output propagation** ? timed events model PLIC wiring delay
-   - `"Update scheduled - tick: %d"` (line 427) ? output event queued
-   - `"Update triggered"` (line 468) ? output event fires
-   - `"Int posted - thread: %d, int id: %d, pri: %d, thres: %d"` (line 495) ? interrupt delivered to hart (priority > threshold, not already claimed)
-   - `"Int filtered - thread: %d, int id: %d, pri: %d, thres: %d"` (line 501) ? interrupt filtered out
+4. **Output propagation** -> timed events model PLIC wiring delay
+   - `"Update scheduled - tick: %d"` (line 427) -> output event queued
+   - `"Update triggered"` (line 468) -> output event fires
+   - `"Int posted - thread: %d, int id: %d, pri: %d, thres: %d"` (line 495) -> interrupt delivered to hart (priority > threshold, not already claimed)
+   - `"Int filtered - thread: %d, int id: %d, pri: %d, thres: %d"` (line 501) -> interrupt filtered out
 
-**Architecture insight:** PLIC uses a claim/complete handshake ? when a hart reads the claim register, it gets the highest-priority pending interrupt; the PLIC marks it as claimed (no longer pending). The hart must write the completion register after handling to allow the same source to assert again.
+**Architecture insight:** PLIC uses a claim/complete handshake -> when a hart reads the claim register, it gets the highest-priority pending interrupt; the PLIC marks it as claimed (no longer pending). The hart must write the completion register after handling to allow the same source to assert again.
 
-#### PMP (10 DPRINTF sites ? `arch/riscv/pmp.cc`)
+#### PMP (10 DPRINTF sites -> `arch/riscv/pmp.cc`)
 
 PMP (Physical Memory Protection) enforces per-mode physical memory access control, checked on every memory access.
 
@@ -843,69 +857,69 @@ PMP (Physical Memory Protection) enforces per-mode physical memory access contro
 
 **Address register writes (`pmpUpdateAddr()`):**
 - Index out of range / normal update / locked entry similar to config
-- TOR-mode cascade lock: `"Update pmp entry %u failed because the entry %u lock bit set and A field is TOR"` (line 257) ? TOR mode entries depend on the next entry's address, so if entry N+1 is locked, entry N is also locked
+- TOR-mode cascade lock: `"Update pmp entry %u failed because the entry %u lock bit set and A field is TOR"` (line 257) -> TOR mode entries depend on the next entry's address, so if entry N+1 is locked, entry N is also locked
 
 **Rule update:**
 - After `pmpUpdateRule()`, if any locked entry found: `"Find lock entry"` (line 224)
 
-**Architecture insight:** RISC-V PMP has three addressing modes: NAPOT (naturally-aligned power-of-two), TOR (top-of-range ? uses two consecutive PMP entries), and NA4 (4-byte aligned). TOR mode means updating one PMP entry can affect its neighbor. The PMP is checked on every physical memory access, including page table walks.
+**Architecture insight:** RISC-V PMP has three addressing modes: NAPOT (naturally-aligned power-of-two), TOR (top-of-range -> uses two consecutive PMP entries), and NA4 (4-byte aligned). TOR mode means updating one PMP entry can affect its neighbor. The PMP is checked on every physical memory access, including page table walks.
 
-#### RiscvMisc (2 DPRINTF sites ? `arch/riscv/isa.cc:486,681`)
+#### RiscvMisc (2 DPRINTF sites -> `arch/riscv/isa.cc:486,681`)
 
-Tracks ALL Control Status Register (CSR) access. High volume ? every CSR read/write instruction triggers output.
+Tracks ALL Control Status Register (CSR) access. High volume -> every CSR read/write instruction triggers output.
 
-- `readMiscRegNoEffect()`: `"Reading MiscReg %s (%d): %#x."` ? CSR name (from `MiscRegNames[]`), index, current value
-- `setMiscRegNoEffect()`: `"Setting MiscReg %s (%d) to %#x."` ? CSR name, index, new value
+- `readMiscRegNoEffect()`: `"Reading MiscReg %s (%d): %#x."` -> CSR name (from `MiscRegNames[]`), index, current value
+- `setMiscRegNoEffect()`: `"Setting MiscReg %s (%d) to %#x."` -> CSR name, index, new value
 
-**Architecture insight:** RISC-V CSRs include: cycle/time/instret counters, mstatus (global status), mtvec (trap vector), mepc (trap PC), mcause (trap cause), mtval (trap value), mie/mip (interrupt enable/pending), pmpcfg/pmpaddr (PMP config/addr), satp (page table root), and many more. Use `RiscvMisc` to see every CSR state change ? invaluable for debugging privilege transitions and trap handling.
+**Architecture insight:** RISC-V CSRs include: cycle/time/instret counters, mstatus (global status), mtvec (trap vector), mepc (trap PC), mcause (trap cause), mtval (trap value), mie/mip (interrupt enable/pending), pmpcfg/pmpaddr (PMP config/addr), satp (page table root), and many more. Use `RiscvMisc` to see every CSR state change -> invaluable for debugging privilege transitions and trap handling.
 
-#### VirtIOMMIO (5 DPRINTF sites ? `dev/riscv/vio_mmio.cc`)
+#### VirtIOMMIO (5 DPRINTF sites -> `dev/riscv/vio_mmio.cc`)
 
 The MMIO transport layer for VirtIO devices on RISC-V platforms.
 
-- `read()`: `"Reading %u bytes @ 0x%x:"` + `"    value: 0x%x"` ? any MMIO read from VirtIO register space
-- `write()`: `"Writing %u bytes @ 0x%x:"` + `"    value: 0x%x"` ? any MMIO write to VirtIO register space
-- `kick()`: `"kick(): Sending interrupt..."` ? guest notifies device (writes to QueueNotify register), triggers device-side virtqueue processing and delivers an interrupt to the guest
+- `read()`: `"Reading %u bytes @ 0x%x:"` + `"    value: 0x%x"` -> any MMIO read from VirtIO register space
+- `write()`: `"Writing %u bytes @ 0x%x:"` + `"    value: 0x%x"` -> any MMIO write to VirtIO register space
+- `kick()`: `"kick(): Sending interrupt..."` -> guest notifies device (writes to QueueNotify register), triggers device-side virtqueue processing and delivers an interrupt to the guest
 
-**Architecture insight:** VirtIO MMIO register layout: Magic/Version/DeviceID/VendorID (device identification), Status (driver/device negotiation), QueueSel/QueueNum/QueueAlign/QueuePFN (virtqueue setup), QueueNotify (kick ? guest?device notification), InterruptStatus/InterruptACK (device?guest notification). The kick mechanism is how the guest tells the device that new descriptors are available in the virtqueue.
+**Architecture insight:** VirtIO MMIO register layout: Magic/Version/DeviceID/VendorID (device identification), Status (driver/device negotiation), QueueSel/QueueNum/QueueAlign/QueuePFN (virtqueue setup), QueueNotify (kick -> guest->device notification), InterruptStatus/InterruptACK (device->guest notification). The kick mechanism is how the guest tells the device that new descriptors are available in the virtqueue.
 
-#### Semihosting (6 DPRINTF sites ? `arch/riscv/semihosting.cc`)
+#### Semihosting (6 DPRINTF sites -> `arch/riscv/semihosting.cc`)
 
 RISC-V semihosting allows bare-metal/guest code to make host service calls via special ebreak sequences.
 
-- 64-bit call dispatch: `"Semihosting call64: %s"` (line 115) ? `"\t ->: 0x%x, %i"` (line 118)
-- 32-bit call dispatch: `"Semihosting call32: %s"` (line 135) ? `"\t ->: 0x%x, %i"` (line 138)
+- 64-bit call dispatch: `"Semihosting call64: %s"` (line 115) -> `"\t ->: 0x%x, %i"` (line 118)
+- 32-bit call dispatch: `"Semihosting call32: %s"` (line 135) -> `"\t ->: 0x%x, %i"` (line 138)
 - ebreak semihosting detection failures: cross-page error (line 170), inaccessible surrounding instructions (line 177)
-- ebreak verification: `"Checking ebreak for semihosting: Prev=%#x EBreak=%#x Next=%#x"` (line 185) ? checks the 3-instruction sequence: ADDI x0,x0,0x1f + EBREAK + ADDI x0,x0,0x7f
+- ebreak verification: `"Checking ebreak for semihosting: Prev=%#x EBreak=%#x Next=%#x"` (line 185) -> checks the 3-instruction sequence: ADDI x0,x0,0x1f + EBREAK + ADDI x0,x0,0x7f
 
-#### Faults (1 DPRINTF site ? `arch/riscv/faults.cc:64`)
+#### Faults (1 DPRINTF site -> `arch/riscv/faults.cc:64`)
 
 Uses `DPRINTFS` (includes CPU scope):
-- `RiscvFault::invoke()`: `"Fault (%s, %u) at PC: %s"` ? fault name (e.g., "PageFault", "IllegalInstFault", "InterruptFault"), exception code number, and PC state. This is the central dispatch point for ALL RISC-V faults/exceptions/interrupts.
+- `RiscvFault::invoke()`: `"Fault (%s, %u) at PC: %s"` -> fault name (e.g., "PageFault", "IllegalInstFault", "InterruptFault"), exception code number, and PC state. This is the central dispatch point for ALL RISC-V faults/exceptions/interrupts.
 
-#### Interrupt (3 DPRINTF sites ? `arch/riscv/interrupts.cc`)
+#### Interrupt (3 DPRINTF sites -> `arch/riscv/interrupts.cc`)
 
-- `post(int_num, index)`: `"Interrupt %d:%d posted"` ? interrupt bit set in pending register
-- `clear(int_num, index)`: `"Interrupt %d:%d cleared"` ? interrupt bit cleared
-- `clearAll()`: `"All interrupts cleared"` ? all pending interrupts reset (e.g., on CPU state reset)
+- `post(int_num, index)`: `"Interrupt %d:%d posted"` -> interrupt bit set in pending register
+- `clear(int_num, index)`: `"Interrupt %d:%d cleared"` -> interrupt bit cleared
+- `clearAll()`: `"All interrupts cleared"` -> all pending interrupts reset (e.g., on CPU state reset)
 
-#### RISC-V Decode (3 DPRINTF sites ? `arch/riscv/decoder.cc`)
+#### RISC-V Decode (3 DPRINTF sites -> `arch/riscv/decoder.cc`)
 
-- `Decoder::moreBytes()`: `"Requesting bytes 0x%08x from address %#x"` ? raw instruction word fetched
-- `Decoder::decode()` entry: `"Decoding instruction 0x%08x at address %#x"` ? instruction before decoding
-- `Decoder::decode()` result: `"Decode: Decoded %s instruction: %#x"` ? matched instruction name + encoding
+- `Decoder::moreBytes()`: `"Requesting bytes 0x%08x from address %#x"` -> raw instruction word fetched
+- `Decoder::decode()` entry: `"Decoding instruction 0x%08x at address %#x"` -> instruction before decoding
+- `Decoder::decode()` result: `"Decode: Decoded %s instruction: %#x"` -> matched instruction name + encoding
 
-#### RISC-V Stack (6 DPRINTF sites ? `arch/riscv/process.cc`)
+#### RISC-V Stack (6 DPRINTF sites -> `arch/riscv/process.cc`)
 
-All in `argsInit()` ? how the RISC-V process sets up the initial user stack:
-- `"Wrote arg \"%s\" to address %p"` (DPRINTFN, line 186) ? each argv string
-- `"Wrote env \"%s\" to address %p"` (line 198) ? each envp string
-- `"Wrote argc %d to address %#x"` (line 221) ? argument count
-- `"Wrote argv pointer %#x to address %#x"` (line 225) ? each argv pointer
-- `"Wrote envp pointer %#x to address %#x"` (line 232) ? each envp pointer
-- `"Wrote aux key %s to address %#x"` / `"Wrote aux value %x to address %#x"` (lines 249, 252) ? auxiliary vector entries
+All in `argsInit()` -> how the RISC-V process sets up the initial user stack:
+- `"Wrote arg \"%s\" to address %p"` (DPRINTFN, line 186) -> each argv string
+- `"Wrote env \"%s\" to address %p"` (line 198) -> each envp string
+- `"Wrote argc %d to address %#x"` (line 221) -> argument count
+- `"Wrote argv pointer %#x to address %#x"` (line 225) -> each argv pointer
+- `"Wrote envp pointer %#x to address %#x"` (line 232) -> each envp pointer
+- `"Wrote aux key %s to address %#x"` / `"Wrote aux value %x to address %#x"` (lines 249, 252) -> auxiliary vector entries
 
-#### RISC-V Checkpoint (2 DPRINTF sites ? `arch/riscv/isa.cc:981,988`)
+#### RISC-V Checkpoint (2 DPRINTF sites -> `arch/riscv/isa.cc:981,988`)
 
 - `ISA::serialize()`: `"Serializing Riscv Misc Registers"`
 - `ISA::unserialize()`: `"Unserializing Riscv Misc Registers"`
@@ -938,4 +952,4 @@ gem5 has different build targets with different debug capabilities:
 
 Use `gem5.debug` when you need gdb-level debugging or extra assertions. Use `gem5.opt` for normal debug-flag-based tracing (`TRACING_ON=1` is enabled in opt).
 
-Current setup uses `gem5.opt`.
+Current setup uses `gem5.debug`.
