@@ -1,67 +1,79 @@
 ---
 name: gem5-prescreen
-description: Run gem5 pre-screen simulations for compiled ISG scripts and download persisted m5out artifacts.
+description: Run local gem5 CLI pre-screen simulations for compiled ISG ELFs and inspect generated m5out artifacts.
 compatibility: opencode
 ---
 
 ## What I Do
 
-Use this skill after `isg-compile` succeeds. It runs a compiled ISG ELF through the gem5 service and saves the returned artifacts.
+Use this skill after `isg-compile` produces a confirmed ELF.
+The agent runs local gem5 directly from `<workspace>/gem5` with the bare-metal RISC-V config and inspects the generated m5out artifacts.
 
 This is a generator pre-screen only. It does not run RTL/VCS simulation and does not generate coverage VDB data.
 
-## CLI Path Constraint
+## Default Paths
 
-Run the CLI from this skill directory: `.opencode/skills/gem5-prescreen/`.
+- `gem5_root`: `<workspace>/gem5`
+- `gem5_binary`: `<workspace>/gem5/build/RISCV/gem5.debug`
+- `gem5_config`: `<workspace>/gem5/config/riscv/fs_bare_metal.py`
+- `artifact_path`: an absolute output directory chosen by the generator for this gem5 run
 
-Use the bundled script path relative to this directory:
+If `gem5-flags.md` exists in the workspace or is provided in the task, read it before choosing debug flags.
 
-```bash
-python3 scripts/gem5_prescreener.py run --script-path <script_path> --artifact-path <artifact_path> --maxinsts 500000
-```
+## Command
 
-If you run from the repo root, prepend `.opencode/skills/gem5-prescreen/` to the script path.
-
-## Commands
-
-Run gem5 pre-screen:
+Run exactly one local gem5 command with the working directory set to `gem5_root`:
 
 ```bash
-python3 scripts/gem5_prescreener.py run --script-path <script_path> --artifact-path <artifact_path> [--maxinsts <n>]
+./build/RISCV/gem5.debug --outdir=<artifact_path> --debug-flags=ExecAll,Faults --debug-file=trace.out config/riscv/fs_bare_metal.py --bare-metal-elf <elf_path> --mem-start=0x0
 ```
+
+`--debug-flags` and `--debug-file` are gem5 options and must appear before `gem5_config`.
+`--bare-metal-elf` and `--mem-start` are config options and must appear after `gem5_config`.
+
+You may omit or change debug flags when the test goal calls for a smaller or more targeted trace. Use `ExecAll,Faults` as the normal first-pass choice for instruction-flow and exception evidence. Add other flags only when the test plan or `gem5-flags.md` justifies them.
+
+This skill intentionally has no wrapper script or remote runner.
 
 ## Parameters
 
-- `script_path`: generator-chosen absolute input path. It may point directly to a compiled `.ELF`, or to a compiled ISG `.py` whose matching `<stem>.Default.ELF` or `<stem>.ELF` is in the same directory or `work_force/`.
-- `artifact_path`: generator-chosen absolute output directory. The runner writes `output.log`, `manifest.json`, `m5out.tar.gz`, and extracted `m5out/` there.
-- `maxinsts`: gem5 maximum instruction count. Default is `500000`.
+- `elf_path`: absolute path to the compiled `.ELF` from `isg-compile`. Required.
+- `artifact_path`: absolute gem5 output directory. Required; pass it to `--outdir`.
+- `debug_flags`: optional gem5 debug flags. Default first-pass value is `ExecAll,Faults`.
+- `debug_file`: optional debug output filename. Default is `trace.out` when debug flags are enabled.
+- `mem_start`: default `0x0` unless the task or config requires another value.
 
 ## Path Rules
 
-- This skill does not need `task_name` and does not infer task layout.
-- Pass both paths explicitly, and both are required absolute paths.
-- If `script_path` points to `.py`, make sure it is the compiled copy or colocated with its ELF. Passing the returned `elf_path` from `isg-compile` is the most direct option.
+- Use the OpenCode project workspace. Do not invent or read a separate workspace override environment variable.
+- `gem5_root`, `gem5_binary`, `gem5_config`, `elf_path`, and `artifact_path` must be absolute paths when checking them.
+- Run the command from `gem5_root`, but keep the command itself relative as shown above so gem5 resolves its tree-local files normally.
+- Do not pass a `.py` ISG script to gem5. Resolve and pass the compiled ELF path.
 
 ## Evidence Workflow
 
-1. Run this only after `isg-compile` reports `status: success`.
-2. Translate the test goal into expected observable evidence, such as committed instruction type, cache/branch stats, exception/log marker, or M5 exit behavior.
-3. After `run`, treat `Status: completed` and `Exit Code: 0` as process results only, not proof of the ISG goal.
-4. Use OpenCode's normal `grep` and `read` tools on the returned `output_log` and `m5out_extract_dir` paths to cite concrete files and metrics.
-5. The conclusion must cite concrete files, lines, or metrics, for example `m5out/stats.txt` with `committedInstType_0::FloatDiv = 47`.
-6. Clearly distinguish "gem5 process completed" from "the ISG functional target is supported by m5out evidence".
-7. Common evidence:
-   - Instruction type: `committedInstType_0::<OpClass>`
-   - Branch prediction: `branchPred.committed_0` / `mispredicted_0`
-   - Cache: `dcache.demandMisses` / `icache.demandMisses`
-   - Exit mode: `output.log` with `Exiting @ tick`
-   - General metrics: `simInsts`, `system.cpu.cpi`, `system.cpu.ipc`
-8. Read `agentDoc/gem5_m5out_guide.md` when metric meanings or grep patterns are unclear.
-9. If evidence is insufficient, revise the ISG script and repeat compile plus gem5 pre-screen.
+1. Run this only after `isg-compile` has produced a confirmed ELF.
+2. Translate the test goal into expected observable evidence, such as committed instruction type, exception/fault trace, branch behavior, memory behavior, or M5 exit behavior.
+3. Run the local gem5 command above with `--outdir=<artifact_path>`.
+4. Treat process exit code 0 as a process result only, not proof of the ISG goal.
+5. Inspect files under `artifact_path`, especially `stats.txt`, `simout`, `simerr`, `config.ini`, and `trace.out` when debug flags were enabled.
+6. The conclusion must cite concrete files, lines, or metrics, for example `stats.txt` with `simInsts = ...` or `trace.out` with a committed target instruction.
+7. Clearly distinguish "gem5 process completed" from "the ISG functional target is supported by gem5 evidence".
+8. If evidence is insufficient, revise the ISG script and repeat compile plus gem5 pre-screen.
+
+## Common Evidence
+
+- Instruction execution: `trace.out` with `ExecAll` records for target instructions.
+- Fault/exception behavior: `trace.out` with `Faults` records and `simerr`.
+- Exit mode: `simout` / `simerr` messages showing normal exit or failure.
+- General metrics: `stats.txt` entries such as `simInsts`, `system.cpu.cpi`, and `system.cpu.ipc` when available.
+- Configuration sanity: `config.ini` confirming the expected system, memory, and CPU setup.
 
 ## Failure Handling
 
-- `No ELF file found`: compile the exact script with `isg-compile` first.
-- `path must be absolute` or `path does not exist`: check `script_path`/`artifact_path`, or pass the compiled ELF path returned by `isg-compile`.
-- `Error uploading ELF`: gem5 service is unreachable or `GEM5_SERVICE_URL` is wrong.
-- `m5out Downloaded: no`: inspect `output.log` and the manifest; gem5 may have failed before artifacts were available.
+- `gem5.debug` not found or not executable: confirm `gem5_binary` under `<workspace>/gem5/build/RISCV/`.
+- `fs_bare_metal.py` not found: confirm `gem5_config` under `<workspace>/gem5/config/riscv/`.
+- `--bare-metal-elf` path error: confirm `elf_path` is an absolute existing `.ELF`.
+- Nonzero exit code: inspect `simout`, `simerr`, and terminal output for config errors, illegal instructions, faults, or early exits.
+- Missing `stats.txt`: gem5 likely failed before stats dump; inspect `simerr`, `simout`, and `trace.out`.
+- Oversized `trace.out`: rerun with narrower debug flags justified by `gem5-flags.md` or the test plan.

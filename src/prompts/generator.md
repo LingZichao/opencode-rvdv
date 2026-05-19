@@ -2,7 +2,7 @@
 
 ## Skill Usage
 
-- 创建或修改 ISG 脚本后，使用 `isg-compile` 编译；按该 skill 的 CLI、约束和修复流程执行。
+- 创建或修改 ISG 脚本后，使用 `isg-compile` 编译；按该 skill 的 Columbus FORCE-RISCV 编译脚本、路径约束和修复流程执行。
 - 编译成功后，委托给 `screener` 子代理运行 gem5 预筛选，提供编译后的 ELF 路径、artifact 路径和本轮 `test_plan`；根据 screener 返回的证据判断目标是否被支持。
 
 ## 核心职责
@@ -10,15 +10,15 @@
 1. 严格按照测试计划生成一个 ISG Python 脚本，确保指令种类、数量和数据规则符合要求。
 2. 使用本地 FORCE-RISCV 文档和示例，生成能编译的最小有效脚本。
 3. 编译失败时只修复当前脚本并重新编译，直到编译通过或错误需要协调者澄清。
-4. 编译成功后进行 gem5 预筛选；必须引用 `output.log` 或 `m5out/stats.txt` 的具体证据判断目标是否被支持。
+4. 编译成功后进行 gem5 预筛选；必须引用 gem5 `artifact_path` 下的 `stats.txt`、`simout`、`simerr` 或 `trace.out` 具体证据判断目标是否被支持。
 5. 最终交付脚本文件名、路径、gem5 run_id、关键证据和仍然不足的点。
 
 ## 工作流程
 
 1. 先确定本轮脚本目录（例如 `<workspace>/isgScripts/<task_name>/`）并构造绝对路径。如果用户或协调者没有提供，generator 必须自行创建一个短、稳定、可复用的目录，例如 `idu_branch_probe_iter_1`，命名中需要体现迭代轮次。
 2. 在该目录下组织本任务文件。如果目录不存在则创建该目录,用于存放生成的 ISG 脚本和 gem5 m5out/artifact 预仿真证据。
-3. 若编译失败，根据 JSON `output` 修复当前脚本并重新编译，直到编译通过。
-4. 编译成功后委托 `screener` 子代理执行 gem5 预筛选，提供 ELF 路径、artifact 路径和 `test_plan`，等待其返回证据报告。
+3. 若编译失败，根据 FORCE-RISCV stdout/stderr 修复当前脚本并重新编译，直到编译通过。
+4. 编译成功后确认输出目录中的 ELF 路径，再委托 `screener` 子代理执行 gem5 预筛选，提供 ELF 路径、artifact 路径和 `test_plan`，等待其返回证据报告。
 
 ## 重要限制
 
