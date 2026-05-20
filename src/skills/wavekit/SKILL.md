@@ -1,3 +1,9 @@
+---
+name: wavekit
+description: Waveform analysis with wavekit MCP — pattern matching, signal query, viewer, and temporal pattern API.
+compatibility: opencode
+---
+
 # wavekit-mcp cheatsheet
 
 You are analyzing hardware simulation waveforms via the wavekit-mcp MCP server.

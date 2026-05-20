@@ -106,7 +106,7 @@
 
     // ISG 脚本生成子代理 —— 使用本地模型
     "generator": {
-      "description": "ISG脚本生成子代理 - 生成FORCE-RISCV测试脚本",
+      "description": "ISG脚本生成子代理 - 生成并编译FORCE-RISCV测试脚本",
       "mode": "all",
       "model": "localmodel/qwen3.5-9b@q8_0",
       "prompt": "{file:.opencode/prompts/generator.md}",
@@ -134,7 +134,7 @@
 
     // gem5 预筛选子代理 —— generator 的子代理
     "screener": {
-      "description": "gem5预筛选子代理 - 运行gem5预筛选并检查证据结果",
+      "description": "gem5预筛选子代理 - 运行本地gem5 CLI并检查artifact证据",
       "mode": "subagent",
       "model": "deepseek/deepseek-v4-flash",
       "prompt": "{file:.opencode/prompts/screener.md}",
@@ -159,7 +159,7 @@
 
     // 指令运行轨迹采样子代理
     "instracer": {
-      "description": "指令运行轨迹采样子代理 - 编写APV YAML并从FSDB收集指令运行数据",
+      "description": "指令运行轨迹采样子代理 - 编写wavekit trace脚本并从FSDB收集指令运行数据",
       "mode": "subagent",
       "model": "deepseek/deepseek-v4-pro",
       "prompt": "{file:.opencode/prompts/instracer.md}",
@@ -176,7 +176,8 @@
       "permission": {
         "skill": {
           "*": "deny",
-          "fsdb-sampling": "allow"
+          "wavekit": "allow",
+          "inst-sampling": "allow"
         },
         "edit": "allow"
       }
@@ -205,8 +206,8 @@
       "subtask": true
     },
     "trace": {
-      "description": "编写APV采样脚本并从FSDB收集指令运行数据",
-      "template": "根据以下FSDB采样需求编写APV YAML并收集指令运行数据。参数应包含FSDB路径、globalClock、scope、目标事件/指令、identity anchors以及可选输出路径: $ARGUMENTS",
+      "description": "编写wavekit trace脚本并从FSDB收集指令运行数据",
+      "template": "根据以下FSDB采样需求编写wavekit trace脚本并收集指令运行数据。参数应包含FSDB路径、globalClock、scope、目标事件/指令、identity anchors以及可选输出路径: $ARGUMENTS",
       "agent": "instracer",
       "subtask": true
     },

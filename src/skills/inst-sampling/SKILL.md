@@ -1,20 +1,22 @@
 ---
 name: inst-sampling
-description: Trace C910 instruction pipeline events in FSDB waveforms.
+description: Trace RISC-V instruction pipeline events in FSDB waveforms with wavekit.
 compatibility: opencode
 ---
 
 # Inst Sampling
 
-Build task-specific wave sampling scripts that trace instruction events through the C910 pipeline using wavekit's `Pattern` engine.
+Build task-specific wave sampling scripts that trace RISC-V instruction events through a design pipeline using wavekit's `Pattern` engine.
 
 ## Project Defaults
 
 ```python
-FSDB = "<workspace>/openc910/smart_run/work_force/novas.fsdb"
-CLOCK = "tb.clk"
-SCOPE = "tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform.x_cpu_top.x_ct_top_0.x_ct_core"
+FSDB = "<task-provided FSDB path>"
+CLOCK = "<task-provided or discovered clock>"
+SCOPE = "<task-provided or discovered design scope>"
 ```
+
+Use task-provided Columbus or RTL simulation artifacts when available. Do not assume legacy `smart_run` paths or scopes unless the task explicitly points to that environment.
 
 ## Workspace
 
@@ -27,7 +29,7 @@ See the `wavekit` skill for full Pattern API, waveform operations, and viewer us
 
 ## Reference Script
 
-[trace.py](trace.py) is a complete 11-stage lifecycle trace — use it as a skeleton, not a template to copy. Each verification task needs its own tailored script.
+[trace.py](trace.py) is a complete historical lifecycle trace example — use its stage structure as a skeleton, not as a signal/path template. Each verification task needs its own tailored script, FSDB path, clock, scope, and signal mapping.
 
 ## Reusable Patterns
 
@@ -43,7 +45,7 @@ Pipelines assign a unique tag (ROB index, IID) at some mid-pipeline stage:
 - **Before tag assignment**: match by architectural attributes — `(PC, inst_word)` at minimum. When decode changes the payload (RVC expansion, fusion), drop the changed field; match on what survives.
 - **After tag assignment**: match by the tag alone.
 
-For C910 example, the anchor is `(vpc, pc15, inst_word)` at IFU IB output. After AIQ create, the key switches to `IID`.
+For a concrete design, choose the earliest stable frontend identity tuple, then switch to the pipeline tag once the design assigns one, for example an `IID`, ROB index, or equivalent internal tag.
 
 ### 2. Guard all waits with a global kill condition
 

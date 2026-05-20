@@ -40,7 +40,7 @@ Use the native arguments required by `forcerv_test_compile.py` for the ISG scrip
 - Use the OpenCode project workspace. Do not invent or read a separate workspace override environment variable.
 - Pass `script_path`, `output_dir`, `compile_script`, and `force_riscv_root` explicitly in generator flow to avoid hidden coupling.
 - `script_path`, `output_dir`, `compile_script`, and `force_riscv_root` must be absolute paths when invoking the command.
-- Do not hard-code C910 config paths when the task targets another design or provides another FORCE-RISCV reference tree.
+- Do not hard-code design-specific config paths when the task targets another design or provides another FORCE-RISCV reference tree.
 
 ## Workflow
 

@@ -8,7 +8,7 @@
 
 - `/verify <file> <lines>` - 启动完整验证流程
 - `/collect <file> <lines>` - 仅收集/查询覆盖率
-- `/generate <plan>` - 仅生成ISG脚本
+- `/generate <plan>` - 生成ISG脚本、编译并完成gem5预筛选
 - `/status` - 查看任务状态
 
 ## 启动流程
@@ -41,14 +41,14 @@
 1. Coordinator接收任务
 2. Coverage Collector收集并查询BASELINE覆盖率
 3. Coordinator分析RTL与微架构上下文并制定测试计划
-4. Generator生成ISG脚本
-5. 执行仿真并获取覆盖率
+4. Generator生成ISG脚本、通过Columbus FORCE-RISCV编译，并委托gem5预筛选
+5. 执行RTL/VCS仿真并获取覆盖率
 6. 迭代优化直至目标达成
 
 ## 目录结构
 
 - `workspace/agentDoc/` - Agent参考文档
-  - `C910ISA_Agent_Friendly.md` - C910 ISA参考文档
+  - 设计/ISA参考文档（如项目提供）- RISC-V或设计专用ISA说明
   - `condition_coverage.md` - 条件覆盖率规则
   - `ISG_Script/` - ISG脚本示例
   - `forceRV/` - ForceRISCV指令定义和文档
@@ -56,7 +56,7 @@
   - `template/BASELINE.vdb/` - 基准覆盖率数据库
   - `template/sim/` - 仿真模板（makefileFRV）
   - `tasks/<task_name>/` - 任务运行目录
-- `src/skills/` - OpenCode技能包（按工具族组织，包含SKILL.md与Python CLI脚本）
+- `src/skills/` - OpenCode技能包（按工具族组织，包含SKILL.md；覆盖率等能力可包含Python CLI脚本）
 - `src/prompts/` - Agent系统提示词
 
 ## 注意事项
@@ -64,6 +64,6 @@
 - 每个任务独立目录: .opencode/skills/coverage/coverageDB/tasks/<task_name>/
 - ISG脚本存放: workspace/isgScripts/<task_name>/
 - 专注BASELINE未覆盖的VP
-- C910扩展指令集不可用，仅考虑RV64GC
+- 默认仅考虑标准RISC-V，通常为RV64GC；设计专用扩展指令须由任务显式启用
 - ISG方法论：间接驱动与概率碰撞，用数量弥补精度
-- 本项目不再注入 TypeScript custom tools；覆盖率、编译与仿真能力通过 `.opencode/skills/*/SKILL.md` 暴露使用规约，并由受限 `bash` 调用 skill 包内的 Python 脚本
+- 本项目不再注入 TypeScript custom tools；覆盖率、编译、gem5预筛选与wavekit追踪能力通过 `.opencode/skills/*/SKILL.md` 暴露使用规约，必要时由受限 `bash` 调用对应本地CLI

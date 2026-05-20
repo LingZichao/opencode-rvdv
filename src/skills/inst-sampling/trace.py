@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Wavekit trace: OpenC910 instruction lifecycle.
+"""Wavekit trace: historical RISC-V instruction lifecycle example.
 
 Tracks an instruction through all pipeline stages from fetch to retirement,
 correctly handling crossbar routing at every width-change point.
 
-  OpenC910 Pipeline
-  =================
+  Pipeline Example
+  ================
 
     IFU                       IDU                            IU                  RTU
     ===                       ===                            ==                  ===
@@ -24,7 +24,8 @@ correctly handling crossbar routing at every width-change point.
     • Back-end (after IID):   match by IID assigned at AIQ creation
 
 Usage:
-  .venv/bin/python src/skills/inst-sampling/trace.py
+  Copy this structure into a task-specific trace script and replace FSDB,
+  CLOCK, SCOPE, and signal paths with the active design's waveform context.
 """
 
 import json
@@ -39,13 +40,13 @@ from wavekit import FsdbReader, MatchStatus, Pattern
 # Configuration
 # =============================================================================
 
-FSDB = "/home/c910/lingzichao/opencode-rvdv/workspace/openc910/smart_run/work_force/novas.fsdb"
+FSDB = "<task-provided FSDB path>"
 CLOCK = "tb.clk"
 SCOPE = (
     "tb.x_soc.x_cpu_sub_system_axi.x_rv_integration_platform"
     ".x_cpu_top.x_ct_top_0.x_ct_core"
 )
-OUTPUT = "workspace/instTraces/openc910_inst_lifecycle/report"
+OUTPUT = "workspace/instTraces/riscv_inst_lifecycle/report"
 TIMEOUT = 500
 END_CYCLE = 5000
 
@@ -603,7 +604,7 @@ def main():
 
     # JSON output
     trace = {
-        "trace_name": "openc910_inst_lifecycle",
+        "trace_name": "riscv_inst_lifecycle",
         "layout": "flattened_by_entry_cycle",
         "slots": 3, "pipes": 2,
         "start_cycle": 0, "end_cycle": END_CYCLE,
@@ -617,7 +618,7 @@ def main():
 
     # Text report
     lines = [
-        "Trace: openc910_inst_lifecycle",
+        "Trace: riscv_inst_lifecycle",
         "  Layout: flattened by cycle_pcgen_ib, slot/pipe kept as metadata",
         "  Stages: IFU(PCGEN→IB) → IDU(ID→IR→IS) → ROB → AIQ → RF → IU(EXEC→CMPLT) → RTU(COMMIT→RETIRE)",
         f"  Results: {len(matches)} total",
